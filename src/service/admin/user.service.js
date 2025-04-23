@@ -1,9 +1,9 @@
-import {axiosInstance} from "../../configs/axios.config.js";
+import { axiosInstance } from "../../configs/axios.config.js";
 
 class UserService {
-    static async lockAccountEmployee(eId) {
+    static async updateAccountLockStatus(eId, locked) {
         return await axiosInstance.put(`/users/${eId}/lock-account`, {
-            locked: true
+            locked: locked
         });
     }
 }
