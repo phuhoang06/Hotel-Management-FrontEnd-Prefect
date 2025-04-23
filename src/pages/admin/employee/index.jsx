@@ -20,23 +20,8 @@ import PermissionGuard from "../../../components/PermissionGuard.jsx";
 import {toast} from 'react-toastify';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import UserService from "../../../service/admin/user.service.js";
-// Hàm tạo dữ liệu nhân viên
-function createEmployeeData(
-    id, fullName, phone, idCard, address, position, note,
-    user_id, start_date, device, dob, gender, email, facebook,
-    branch, work_branch, department, login_account, image
-) {
-    return {
-        id, fullName, phone, idCard, address, position, note,
-        user_id, start_date, device, dob, gender, email, facebook,
-        branch, work_branch, department, login_account, image,
-        details: [
-            {label: 'Ghi chú', value: note || 'Không có ghi chú'},
-            {label: 'Ngày cập nhật', value: '2023-10-15'},
-            {label: 'Trạng thái', value: 'Đang làm việc'},
-        ],
-    };
-}
+import EmployeePanel from "./EmployeePanel.jsx";
+
 
 // Component Row hiển thị từng hàng nhân viên
 function Row({row, selectedRows, handleRowSelect, selectedColumns, handleOpenEditDialog}) {
@@ -433,101 +418,7 @@ function Employee() {
 
     return (
         <Grid container spacing={0.5}>
-            <Grid size={{xs: 4, md: 2.4}}>
-                <Box sx={{mt: 2}}>
-                    <Typography variant="h6" sx={{ml: 2, mb: 0.5, fontWeight: 'bold'}}>Danh sách nhân viên</Typography>
-                    <Typography color="textSecondary" sx={{fontSize: 13, ml: 2, mb: 1}}>Đã sử dụng nhân
-                        viên</Typography>
-                </Box>
-
-                <Box sx={{marginLeft: 1, p: 1, border: '1px solid #e0e0e0', borderRadius: 2, mb: 3, boxShadow: 1}}>
-                    <Typography variant="subtitle1" sx={{mb: 1, fontWeight: 'bold', fontSize: 13}}>Trạng thái nhân
-                        viên</Typography>
-                    <Box sx={{display: 'flex', flexDirection: 'column', fontSize: 13}}>
-                        <FormControlLabel control={<Checkbox defaultChecked size="small"/>}
-                                          label={<Typography sx={{fontSize: 13}}>Đang làm việc</Typography>}/>
-                        <FormControlLabel control={<Checkbox size="small"/>}
-                                          label={<Typography sx={{fontSize: 13}}>Đã nghỉ</Typography>}/>
-                    </Box>
-                </Box>
-
-                <Box sx={{
-                    marginLeft: 1,
-                    p: 1,
-                    border: '1px solid #e0e0e0',
-                    borderRadius: 2,
-                    mb: 3,
-                    boxShadow: 1,
-                    backgroundColor: '#ffffff'
-                }}>
-                    <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1}}>
-                        <Typography variant="subtitle1" sx={{mb: 1, fontWeight: 'bold', fontSize: 13}}>Phòng
-                            ban</Typography>
-                        <Box>
-                            <IconButton size="small" sx={{mr: 0.5}}><AddIcon fontSize="small"/></IconButton>
-                            <IconButton size="small"><ExpandLessIcon fontSize="small"/></IconButton>
-                        </Box>
-                    </Box>
-                    <FormControl fullWidth size="small">
-                        <Select displayEmpty defaultValue=""
-                                sx={{borderRadius: 1, height: 32, ml: 1, mr: 1, mb: 2, backgroundColor: '#ffffff'}}>
-                            <MenuItem value="" disabled>Chọn phòng ban</MenuItem>
-                            <MenuItem value="Phòng PV">Phòng PV</MenuItem>
-                            <MenuItem value="Phòng AI">Phòng AI</MenuItem>
-                        </Select>
-                    </FormControl>
-                </Box>
-
-                <Box sx={{
-                    marginLeft: 1,
-                    p: 1,
-                    border: '1px solid #e0e0e0',
-                    borderRadius: 2,
-                    mb: 3,
-                    boxShadow: 1,
-                    backgroundColor: '#ffffff'
-                }}>
-                    <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1}}>
-                        <Typography variant="subtitle2" sx={{mt: 1, ml: 1, mb: 1, fontWeight: 'bold', fontSize: 13}}>Chức
-                            danh</Typography>
-                        <Box>
-                            <IconButton size="small" sx={{mr: 0.5}}><AddIcon fontSize="small"/></IconButton>
-                            <IconButton size="small"><ExpandLessIcon fontSize="small"/></IconButton>
-                        </Box>
-                    </Box>
-                    <FormControl fullWidth size="small">
-                        <Select displayEmpty defaultValue=""
-                                sx={{borderRadius: 1, height: 32, ml: 1, mr: 1, mb: 2, backgroundColor: '#ffffff'}}>
-                            <MenuItem value="" disabled>Chọn chức danh</MenuItem>
-                            <MenuItem value="Trưởng phòng">Trưởng phòng</MenuItem>
-                            <MenuItem value="Nhân viên">Nhân viên</MenuItem>
-                        </Select>
-                    </FormControl>
-                </Box>
-
-                <Box sx={{
-                    ml: 1,
-                    p: 1.5,
-                    border: '1px solid #e0e0e0',
-                    borderRadius: 2,
-                    boxShadow: 1,
-                    backgroundColor: '#ffffff',
-                    mb: 1
-                }}>
-                    <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                        <Typography variant="subtitle2" sx={{mb: 3, fontWeight: 'bold', fontSize: 13, height: 40}}>Số
-                            bản ghi:</Typography>
-                        <FormControl size="small" sx={{width: 80, height: 24}}>
-                            <Select value={size} onChange={(e) => setSize(parseInt(e.target.value, 10))}
-                                    sx={{borderRadius: 1, height: 28}}>
-                                <MenuItem value={10}>10</MenuItem>
-                                <MenuItem value={20}>20</MenuItem>
-                                <MenuItem value={50}>50</MenuItem>
-                            </Select>
-                        </FormControl>
-                    </Box>
-                </Box>
-            </Grid>
+            <EmployeePanel/>
 
             <Grid size={{xs: 6, md: 9.5}}>
                 <Box sx={{
