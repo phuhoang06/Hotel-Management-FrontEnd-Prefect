@@ -10,11 +10,11 @@ import authService from './service/auth.service';
 authService.initAuth();
 
 // Nếu đã đăng nhập, tải quyền từ server
-if (authService.isAuthenticated()) {
-    authService.fetchUserPermissions()
-        .then(() => console.log('Permissions loaded successfully'))
-        .catch(err => console.error('Error loading permissions:', err));
-}
+// if (authService.isAuthenticated()) {
+//     authService.fetchUserPermissions()
+//         .then(() => console.log('Permissions loaded successfully'))
+//         .catch(err => console.error('Error loading permissions:', err));
+// }
 
 createRoot(document.getElementById('root')).render(
         <BrowserRouter>

@@ -67,6 +67,8 @@ class EmployeeService {
     static async getPositions() {
         return await axiosInstance.get('/positions');
     }
+
+
 }
 
 export default EmployeeService;

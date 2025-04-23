@@ -43,12 +43,12 @@ axiosInstance.interceptors.response.use(
             }
             
             // Handle 403 Forbidden (not authorized)
-            if (error.response.status === 403) {
-                // Check if already on forbidden page to prevent redirect loops
-                if (window.location.pathname !== '/forbidden') {
-                    window.location = '/forbidden';
-                }
-            }
+            // if (error.response.status === 403) {
+            //     // Check if already on forbidden page to prevent redirect loops
+            //     if (window.location.pathname !== '/forbidden') {
+            //         window.location = '/forbidden';
+            //     }
+            // }
         }
         
         return Promise.reject(error);

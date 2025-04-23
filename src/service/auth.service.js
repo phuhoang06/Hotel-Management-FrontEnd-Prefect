@@ -84,23 +84,24 @@ const authService = {
   // Fetch user permissions from server
   fetchUserPermissions: async () => {
     try {
-      const response = await axiosInstance.get('/auth/permissions');
-      if (response.data && response.data.success) {
+      const response = await axiosInstance.get('/permissions');
+      console.log(response)
+      if (response.data && response.data) {
         // Cấu trúc response từ API như hướng dẫn: {permissions: [], roles: []}
-        const { permissions, roles } = response.data.data || { permissions: [], roles: [] };
+        const { content } = response.data;
         
         // Lưu permissions vào localStorage
-        localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(permissions || []));
+        localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(content || []));
         
-        // Cập nhật roles nếu có sẵn từ API
-        if (roles && Array.isArray(roles)) {
-          localStorage.setItem('roles', JSON.stringify(roles));
-        }
+        // // Cập nhật roles nếu có sẵn từ API
+        // if (roles && Array.isArray(roles)) {
+        //   localStorage.setItem('roles', JSON.stringify(roles));
+        // }
         
-        console.log('Permissions loaded:', permissions);
-        console.log('Roles loaded:', roles);
+        // console.log('Permissions loaded:', permissions);
+        // console.log('Roles loaded:', roles);
         
-        return permissions;
+        return content;
       }
       return [];
     } catch (error) {
@@ -116,27 +117,18 @@ const authService = {
     
     try {
       const userPermissions = JSON.parse(permissionsStr);
-      
+      console.log(permission)
+      console.log(userPermissions)
+
+      const hasSystemAdmin = userPermissions.some(p => p.name === "SYSTEM_ADMIN");
+
+      if (hasSystemAdmin) {
+        return true;
+      }
+
       // Direct permission check
-      if (userPermissions.includes(permission)) {
-        return true;
-      }
-      
-      // Check for wildcard permission (SYSTEM_ADMIN)
-      if (userPermissions.includes('SYSTEM_ADMIN')) {
-        return true;
-      }
-      
-      // Check if any of the user's permissions is a parent of the requested permission
-      for (const userPermission of userPermissions) {
-        if (PERMISSION_HIERARCHY[userPermission] && 
-            (PERMISSION_HIERARCHY[userPermission].includes('*') || 
-             PERMISSION_HIERARCHY[userPermission].includes(permission))) {
-          return true;
-        }
-      }
-      
-      return false;
+      return  permission.some(perm => p.name === permission);
+
     } catch (error) {
       console.error('Error checking permission:', error);
       return false;

@@ -85,6 +85,7 @@ const LoginPage = () => {
         
         // Lấy quyền và vai trò người dùng từ API
         try {
+          console.log("eeeeee")
           await authService.fetchUserPermissions();
           console.log('Permissions and roles loaded successfully');
         } catch (permError) {
