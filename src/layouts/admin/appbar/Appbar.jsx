@@ -7,10 +7,12 @@ import HomeIcon from "../../../icons/homeIcon.jsx";
 import authService from "../../../service/auth.service.js";
 import { useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
+import PasswordChangeDialog from "../content/ChangePass.jsx";
 
 function Appbar() {
     const [anchorEl, setAnchorEl] = useState(null);
     const [accountModalOpen, setAccountModalOpen] = useState(false);
+    const [openPasswordDialog, setOpenPasswordDialog] = useState(false);
     const open = Boolean(anchorEl);
     const navigate = useNavigate();
 
@@ -39,11 +41,15 @@ function Appbar() {
     const handleAccount = () => {
         console.log("Tài khoản clicked");
         handleMenuClose();
-        setAccountModalOpen(true);
+        setOpenPasswordDialog(true);
     };
 
     const handleCloseAccountModal = () => {
         setAccountModalOpen(false);
+    };
+
+    const handleClosePasswordDialog = () => {
+        setOpenPasswordDialog(false);
     };
 
     return (
@@ -193,6 +199,7 @@ function Appbar() {
                     </Box>
                 </Box>
             </AppBar>
+            <PasswordChangeDialog open={openPasswordDialog} onClose={handleClosePasswordDialog} />
         </>
     );
 }
