@@ -159,15 +159,15 @@ function Routers() {
                 
                 {/* Sử dụng route protection trực tiếp, không lồng */}
                 <Route path="employee" element={
-                    // <ProtectedRoute requiredPermissions="VIEW_EMPLOYEE">
+                    <ProtectedRoute requiredPermissions="VIEW_EMPLOYEE">
                     <EmployeeContent/>
-                    // </ProtectedRoute>
+                     </ProtectedRoute>
                 } />
                 
                 <Route path="room" element={
-                    // <ProtectedRoute requiredPermissions="VIEW_ROOM">
+                    <ProtectedRoute requiredPermissions="VIEW_ROOM">
                         <RoomsContent />
-                    // </ProtectedRoute>
+                     </ProtectedRoute>
                 } />
                 
                 <Route path="employee/schedule" element={<EmployeeScheduleContent />} />
@@ -180,9 +180,9 @@ function Routers() {
 
             {/* Employee Routes */}
             <Route path="/employee" element={
-                // <ProtectedRoute requiredRoles={['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_RECEPTIONIST', 'ROLE_VIEWER']}>
+                <ProtectedRoute requiredRoles={['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_RECEPTIONIST', 'ROLE_VIEWER']}>
                     <EmployeeLayout />
-                // </ProtectedRoute>
+                 </ProtectedRoute>
             }>
                 <Route index element={<Bookings />} />
                 <Route path="bookings" element={<Bookings />} />

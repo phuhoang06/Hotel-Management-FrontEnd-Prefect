@@ -8,10 +8,10 @@ const PERMISSIONS_KEY = 'hotel_user_permissions';
 const PERMISSION_HIERARCHY = {
   'SYSTEM_ADMIN': ['*'], // System admin has all permissions
   'ROLE_ADMIN': ['*'],  // Thêm dòng này
-  'ROOM_MANAGEMENT': ['VIEW_ROOM', 'CREATE_ROOM', 'EDIT_ROOM', 'DELETE_ROOM'],
-  'EMPLOYEE_MANAGEMENT': ['VIEW_EMPLOYEE', 'CREATE_EMPLOYEE', 'EDIT_EMPLOYEE', 'DELETE_EMPLOYEE'],
-  'BOOKING_MANAGEMENT': ['VIEW_BOOKING', 'CREATE_BOOKING', 'EDIT_BOOKING', 'DELETE_BOOKING'],
-  'INVOICE_MANAGEMENT': ['VIEW_INVOICE', 'CREATE_INVOICE', 'EDIT_INVOICE', 'DELETE_INVOICE']
+  'ROOM_MANAGEMENT': ['VIEW_ROOM', 'CREATE_ROOM', 'UPDATE_ROOM', 'DELETE_ROOM'],
+  'EMPLOYEE_MANAGEMENT': ['VIEW_EMPLOYEE', 'CREATE_EMPLOYEE', 'UPDATE_EMPLOYEE', 'DELETE_EMPLOYEE'],
+  'BOOKING_MANAGEMENT': ['VIEW_BOOKING', 'CREATE_BOOKING', 'UPDATE_BOOKING', 'DELETE_BOOKING'],
+  'INVOICE_MANAGEMENT': ['VIEW_INVOICE', 'CREATE_INVOICE', 'UPDATE_INVOICE', 'DELETE_INVOICE']
 };
 
 const setAuthToken = (token) => {
@@ -92,14 +92,7 @@ const authService = {
         
         // Lưu permissions vào localStorage
         localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(content || []));
-        
-        // // Cập nhật roles nếu có sẵn từ API
-        // if (roles && Array.isArray(roles)) {
-        //   localStorage.setItem('roles', JSON.stringify(roles));
-        // }
-        
-        // console.log('Permissions loaded:', permissions);
-        // console.log('Roles loaded:', roles);
+
         
         return content;
       }
@@ -114,21 +107,19 @@ const authService = {
   hasPermission: (permission) => {
     const permissionsStr = localStorage.getItem(PERMISSIONS_KEY);
     if (!permissionsStr) return false;
-    
+
     try {
       const userPermissions = JSON.parse(permissionsStr);
-      console.log(permission)
-      console.log(userPermissions)
-
-      const hasSystemAdmin = userPermissions.some(p => p.name === "SYSTEM_ADMIN");
-
-      if (hasSystemAdmin) {
+      // normalize required permissions to array
+      const permList = Array.isArray(permission) ? permission : [permission];
+      // extract names from stored permissions (handle object or string)
+      const userPermNames = userPermissions.map(p => typeof p === 'string' ? p : p.name);
+      // system admin bypass
+      if (userPermNames.includes('SYSTEM_ADMIN')) {
         return true;
       }
-
-      // Direct permission check
-      return  permission.some(perm => p.name === permission);
-
+      // check if any required permission exists
+      return permList.some(req => userPermNames.includes(req));
     } catch (error) {
       console.error('Error checking permission:', error);
       return false;
