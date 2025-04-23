@@ -14,7 +14,7 @@ const PermissionGuard = ({ permissions, renderNoAccess = false, children, noAcce
   // Convert single permission to array
   
   // Check if user has any of the required permissions
-  const hasAccess =authService.hasPermission(permissions)
+  const hasAccess = authService.hasPermission(permissions)
 
   console.log(hasAccess)
   

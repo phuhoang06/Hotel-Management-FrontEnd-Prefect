@@ -50,7 +50,7 @@ class EmployeeService {
     }
 
     static async getAllUsers() {
-        return await axiosInstance.get('api/users');
+        return await axiosInstance.get('/users');
     }
 
     /**

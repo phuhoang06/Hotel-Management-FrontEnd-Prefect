@@ -191,7 +191,7 @@ function Row({row, selectedRows, handleRowSelect, selectedColumns, handleOpenEdi
                                 }}>
                                     Lấy mã xác nhận
                                 </Button>
-                                {/*<PermissionGuard permissions="EDIT_EMPLOYEE">*/}
+                                <PermissionGuard permissions="UPDATE_EMPLOYEE">
                                     <Button
                                         variant="contained"
                                         size="small"
@@ -205,7 +205,7 @@ function Row({row, selectedRows, handleRowSelect, selectedColumns, handleOpenEdi
                                     >
                                         Cập nhật
                                     </Button>
-                                {/*</PermissionGuard>*/}
+                                </PermissionGuard>
                                 <Button variant="contained" size="small" sx={{
                                     backgroundColor: '#d32f2f',
                                     textTransform: 'none',
@@ -798,7 +798,7 @@ function Employee() {
                 </PermissionGuard>
 
                  {/*Dialog chỉnh sửa nhân viên */}
-                <PermissionGuard permissions="EDIT_EMPLOYEE">
+                <PermissionGuard permissions="UPDATE_EMPLOYEE">
                     <EditEmployeeDialog
                         open={openEditDialog}
                         onClose={() => setOpenEditDialog(false)}
