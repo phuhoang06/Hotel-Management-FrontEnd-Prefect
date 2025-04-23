@@ -3,11 +3,14 @@ import { TableRow, TableCell, Checkbox, IconButton, Collapse, Box, Typography, G
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
+import LockIcon from '@mui/icons-material/Lock';
 import PermissionGuard from "../../../components/PermissionGuard.jsx";
 import { toast } from 'react-toastify';
+import UserService from "../../../service/admin/user.service.js";
 
-function EmployeeRow({ row, selectedRows, handleRowSelect, selectedColumns, handleOpenEditDialog, handleLockAccount, columnOptions }) {
+function EmployeeRow({ row, selectedRows, handleRowSelect, selectedColumns, handleOpenEditDialog, columnOptions }) {
     const [open, setOpen] = useState(false);
+    const [locked, setLocked] = useState(row.locked || false);
 
     const detailedInfo = columnOptions
         .filter((option) => option.label !== 'Ảnh')
@@ -19,6 +22,17 @@ function EmployeeRow({ row, selectedRows, handleRowSelect, selectedColumns, hand
     const column2 = detailedInfo.slice(0, 9);
     const column3 = detailedInfo.slice(9);
     const placeholderImage = '';
+
+    const handleLockToggle = async () => {
+        try {
+            const newLockedStatus = !locked;
+            await UserService.updateAccountLockStatus(row.userId, newLockedStatus);
+            setLocked(newLockedStatus);
+            toast.success(newLockedStatus ? 'Đã khóa tài khoản!' : 'Đã mở khóa tài khoản!');
+        } catch (error) {
+            toast.error('Cập nhật trạng thái thất bại!');
+        }
+    };
 
     return (
         <>
@@ -112,10 +126,12 @@ function EmployeeRow({ row, selectedRows, handleRowSelect, selectedColumns, hand
                                 </Grid>
                             </Grid>
                             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 3, mb: 7 }}>
-                                <Button variant="outlined"
-                                        onClick={() => handleLockAccount(row.userId)}
-                                        startIcon={<LockOpenIcon />}>
-                                    Lock On
+                                <Button
+                                    variant="outlined"
+                                    onClick={handleLockToggle}
+                                    startIcon={locked ? <LockIcon /> : <LockOpenIcon />}
+                                >
+                                    {locked ? 'Lock Off' : 'Lock On'}
                                 </Button>
                                 <Button variant="contained" size="small"
                                         sx={{

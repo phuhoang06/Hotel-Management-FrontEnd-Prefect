@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Grid, Snackbar, Alert } from '@mui/material';
 import { toast } from 'react-toastify';
 import EmployeeService from "../../../service/admin/employee.service.js";
-import UserService from "../../../service/admin/user.service.js";
 import SearchBar from './SearchBar.jsx';
 import DataTable from './DataTable.jsx';
 import AddEmployee from './AddEmployee.jsx';
@@ -197,14 +196,6 @@ function Employee() {
 
     const handleSnackbarClose = () => setOpenSnackbar(false);
 
-    const handleLockAccount = async (eId) => {
-        UserService.lockAccountEmployee(eId).then(res => {
-            toast.success(res.data.message);
-        }).catch(error => {
-            toast.error(error.message);
-        });
-    };
-
     return (
         <Grid container spacing={0.5}>
             <Grid size={{ xs: 4, md: 2.4 }}>
@@ -233,7 +224,6 @@ function Employee() {
                     handleSelectAllRows={handleSelectAllRows}
                     loading={loading}
                     handleOpenEditDialog={handleOpenEditDialog}
-                    handleLockAccount={handleLockAccount}
                     columnOptions={columnOptions}
                 />
                 <AddEmployee

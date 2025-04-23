@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Checkbox, CircularProgress } from '@mui/material';
 import EmployeeRow from './EmployeeRow.jsx';
 
-function DataTable({ employees, selectedColumns, selectedRows, handleRowSelect, handleSelectAllRows, loading, handleOpenEditDialog, handleLockAccount, columnOptions }) {
+function DataTable({ employees, selectedColumns, selectedRows, handleRowSelect, handleSelectAllRows, loading, handleOpenEditDialog, columnOptions }) {
     return (
         <Box sx={{
             mt: 3,
@@ -75,7 +75,6 @@ function DataTable({ employees, selectedColumns, selectedRows, handleRowSelect, 
                                 handleRowSelect={handleRowSelect}
                                 selectedColumns={selectedColumns}
                                 handleOpenEditDialog={handleOpenEditDialog}
-                                handleLockAccount={handleLockAccount}
                                 columnOptions={columnOptions}
                             />
                         ))}
