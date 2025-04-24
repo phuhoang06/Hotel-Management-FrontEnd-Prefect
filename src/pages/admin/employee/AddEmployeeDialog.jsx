@@ -30,6 +30,13 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData, onAddSucce
     const [accounts, setAccounts] = useState([]);
     const [imageFile, setImageFile] = useState(null);
 
+    // Ánh xạ thông điệp lỗi từ server sang tiếng Việt
+    const errorMessages = {
+        "ID Card already exists": "Số CMND/CCCD đã tồn tại",
+        "User is already linked to another employee": "Tài khoản này đã được liên kết với nhân viên khác",
+        "Validation Failed": "Xác thực thất bại",
+    };
+
     // Fetch accounts for userId selection
     useEffect(() => {
         EmployeeService.getAllUsers().then(res => {
@@ -105,14 +112,26 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData, onAddSucce
                     toast.success(isEditMode ? "Cập nhật nhân viên thành công" : "Thêm nhân viên thành công");
                     handleClose();
                     if (!isEditMode && onAddSuccess) {
-                        onAddSuccess(); // Gọi onAddSuccess để kích hoạt làm mới dữ liệu
+                        onAddSuccess();
                     }
                 })
                 .catch((err) => {
                     if (err.response && err.response.status === 403) {
                         toast.error("Bạn không có quyền thực hiện hành động này!");
+                    } else if (err.response && err.response.data && err.response.data.errors) {
+                        // Xử lý lỗi validation từ server
+                        const errors = err.response.data.errors;
+                        Object.keys(errors).forEach((key) => {
+                            const errorMessage = errors[key];
+                            const displayMessage = errorMessages[errorMessage] || errorMessage;
+                            // Hiển thị thông điệp lỗi từ server
+                            toast.error(displayMessage);
+                        });
                     } else {
-                        toast.error("Có lỗi xảy ra, vui lòng thử lại!");
+                        // Hiển thị thông điệp lỗi chung nếu không có chi tiết lỗi
+                        const serverMessage = err.response?.data?.message;
+                        const displayMessage = errorMessages[serverMessage] || serverMessage || "Có lỗi xảy ra, vui lòng thử lại!";
+                        toast.error(displayMessage);
                     }
                     console.error("Error adding employee:", err);
                 });
