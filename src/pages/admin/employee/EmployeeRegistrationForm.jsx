@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import {
     Button,
     TextField,
@@ -26,6 +27,8 @@ import {
     Email,
     VpnKey
 } from '@mui/icons-material';
+import roleService from '../../../service/admin/role.service.js';
+import authService from '../../../service/auth.service';
 
 function RegistrationDialog({ open, onClose }) {
     // Form data states
@@ -51,15 +54,38 @@ function RegistrationDialog({ open, onClose }) {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     // Success notification state
-    const [successOpen, setSuccessOpen] = useState(false);
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-    // User roles
-    const roles = [
-        { value: 'user', label: 'Người dùng' },
-        { value: 'admin', label: 'Quản trị viên' },
-        { value: 'manager', label: 'Quản lý' },
-        { value: 'editor', label: 'Biên tập viên' }
-    ];
+    // Roles state
+    const [roles, setRoles] = useState([]);
+    const [loadingRoles, setLoadingRoles] = useState(false);
+
+    useEffect(() => {
+        const fetchRoles = async () => {
+            try {
+                setLoadingRoles(true);
+                roleService.getAllRoles()
+                    .then(response => {
+                        const apiData = response.data?.content || response.data?.data || response.data;
+                        if (Array.isArray(apiData)) {
+                            setRoles(apiData.map(role => ({
+                                value: role.id,
+                                label: role.name
+                            })));
+                        } else {
+                            console.error('Dữ liệu roles không hợp lệ:', apiData);
+                        }
+                    })
+                    .catch(error => console.error('Lỗi tải roles:', error));
+            } catch (error) {
+                console.error('Lỗi khi tải vai trò:', error);
+            } finally {
+                setLoadingRoles(false);
+            }
+        };
+
+        fetchRoles();
+    }, []);
 
     // Handle form field changes
     const handleChange = (e) => {
@@ -140,28 +166,59 @@ function RegistrationDialog({ open, onClose }) {
     };
 
     // Form submission handler
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (validateForm()) {
-            // Form is valid - handle submission
-            console.log('Form submitted:', formData);
-            setSuccessOpen(true);
+            try {
+                // Find the selected role object to get the name
+                const selectedRole = roles.find(r => r.value === formData.role);
+                let roleName = selectedRole ? selectedRole.label : null;
 
-            // Reset form
-            setFormData({
-                username: '',
-                email: '',
-                password: '',
-                confirmPassword: '',
-                role: ''
-            });
+                if (!roleName) {
+                    setSnackbar({ open: true, message: 'Lỗi: Không tìm thấy vai trò đã chọn.', severity: 'error' });
+                    return;
+                }
 
-            // Close dialog after successful submission
-            setTimeout(() => {
-                onClose();
-            }, 1500);
+                // Add ROLE_ prefix if not already present
+                if (!roleName.startsWith('ROLE_')) {
+                    roleName = `ROLE_${roleName}`;
+                }
+
+                // Format roles as an array of objects as required by the API
+                const rolesPayload = [{ name: roleName }];
+
+                // Call the register endpoint with the correct payload structure
+                const response = await authService.register(
+                    formData.username,
+                    formData.email,
+                    formData.password,
+                    formData.confirmPassword,
+                    rolesPayload
+                );
+
+                if (response.success) {
+                    setSnackbar({ open: true, message: response.message || 'Đăng ký thành công!', severity: 'success' });
+                    onClose();
+                    resetForm();
+                } else {
+                    setSnackbar({ open: true, message: response.message || 'Lỗi đăng ký không xác định', severity: 'error' });
+                }
+            } catch (error) {
+                const errorMessage = error.response?.data?.message || error.message || 'Lỗi kết nối hoặc đăng ký không thành công';
+                setSnackbar({ open: true, message: errorMessage, severity: 'error' });
+            }
         }
+    };
+
+    const resetForm = () => {
+        setFormData({
+            username: '',
+            email: '',
+            password: '',
+            confirmPassword: '',
+            role: ''
+        });
     };
 
     // Handle close success notification
@@ -169,7 +226,7 @@ function RegistrationDialog({ open, onClose }) {
         if (reason === 'clickaway') {
             return;
         }
-        setSuccessOpen(false);
+        setSnackbar({ open: false, message: '', severity: 'success' });
     };
 
     return (
@@ -217,7 +274,7 @@ function RegistrationDialog({ open, onClose }) {
                             type="email"
                             value={formData.email}
                             onChange={handleChange}
-                            error={!!errors.email}
+                            xca                            error={!!errors.email}
                             helperText={errors.email}
                             InputProps={{
                                 startAdornment: (
@@ -310,24 +367,18 @@ function RegistrationDialog({ open, onClose }) {
                                 label="Vai trò"
                                 onChange={handleChange}
                             >
-                                {roles.map((role) => (
-                                    <MenuItem key={role.value} value={role.value}>
-                                        {role.label}
-                                    </MenuItem>
-                                ))}
+                                {loadingRoles ? (
+                                    <MenuItem value="">Đang tải...</MenuItem>
+                                ) : (
+                                    roles.map((role) => (
+                                        <MenuItem key={role.value} value={role.value}>
+                                            {role.label}
+                                        </MenuItem>
+                                    ))
+                                )}
                             </Select>
                             {errors.role && <FormHelperText>{errors.role}</FormHelperText>}
                         </FormControl>
-
-                        {/* Optional: Login link */}
-                        <Box sx={{ mt: 2, textAlign: 'center' }}>
-                            <Typography variant="body2" color="text.secondary">
-                                Đã có tài khoản?{' '}
-                                <Button color="primary" size="small" sx={{ p: 0, minWidth: 'auto', textTransform: 'none' }}>
-                                    Đăng nhập ngay
-                                </Button>
-                            </Typography>
-                        </Box>
                     </Box>
                 </DialogContent>
 
@@ -347,13 +398,13 @@ function RegistrationDialog({ open, onClose }) {
 
             {/* Success notification */}
             <Snackbar
-                open={successOpen}
+                open={snackbar.open}
                 autoHideDuration={6000}
                 onClose={handleCloseSuccess}
                 anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
             >
-                <Alert onClose={handleCloseSuccess} severity="success" sx={{ width: '100%' }}>
-                    Đăng ký tài khoản thành công!
+                <Alert onClose={handleCloseSuccess} severity={snackbar.severity} sx={{ width: '100%' }}>
+                    {snackbar.message}
                 </Alert>
             </Snackbar>
         </>
@@ -383,3 +434,4 @@ function App() {
 }
 
 export default App;
+export { RegistrationDialog };

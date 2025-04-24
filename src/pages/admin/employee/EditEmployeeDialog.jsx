@@ -9,6 +9,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import EditIcon from '@mui/icons-material/Edit';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { styled } from '@mui/material/styles';
+import { RegistrationDialog } from './EmployeeRegistrationForm';
 import { useFormik } from "formik";
 
 function EditEmployeeDialog({ open, onClose, employeeData }) {
@@ -41,6 +42,8 @@ function EditEmployeeDialog({ open, onClose, employeeData }) {
         ],
     };
 
+
+    const [openRegistrationDialog, setOpenRegistrationDialog] = useState(false);
     const [provinces] = useState(mockProvinces);
     const [districts, setDistricts] = useState([]);
     const [imagePreview, setImagePreview] = useState(null);
@@ -121,6 +124,7 @@ function EditEmployeeDialog({ open, onClose, employeeData }) {
     };
 
     return (
+        <>
         <Dialog
             open={open}
             onClose={onClose}
@@ -459,6 +463,7 @@ function EditEmployeeDialog({ open, onClose, employeeData }) {
                                                         minWidth: '40px',
                                                         padding: '0 8px'
                                                     }}
+                                                    onClick={() => setOpenRegistrationDialog(true)}
                                                 >
                                                     +
                                                 </Button>
@@ -790,6 +795,12 @@ function EditEmployeeDialog({ open, onClose, employeeData }) {
                 </Button>
             </DialogActions>
         </Dialog>
+            <RegistrationDialog
+                open={openRegistrationDialog}
+                onClose={() => setOpenRegistrationDialog(false)}
+            />
+        </>
+
     );
 }
 
