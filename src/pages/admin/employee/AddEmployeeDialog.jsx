@@ -12,6 +12,7 @@ import { styled } from '@mui/material/styles';
 import { useFormik } from "formik";
 import EmployeeService from "../../../service/admin/employee.service.js";
 import {toast} from "react-toastify";
+import { RegistrationDialog } from './EmployeeRegistrationForm';
 
 function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
     const VisuallyHiddenInput = styled('input')({
@@ -46,6 +47,7 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
     const [provinces] = useState(mockProvinces);
     const [districts, setDistricts] = useState([]);
     const [imagePreview, setImagePreview] = useState(null);
+    const [openRegistrationDialog, setOpenRegistrationDialog] = useState(false);
 
     // Dữ liệu tài khoản
     const [accounts, setAccounts] = useState([]);
@@ -366,6 +368,7 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                                                         minWidth: '40px',
                                                         padding: '0 8px'
                                                     }}
+                                                    onClick={() => setOpenRegistrationDialog(true)}
                                                 >
                                                     +
                                                 </Button>
@@ -412,6 +415,7 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                                                         minWidth: '40px',
                                                         padding: '0 8px'
                                                     }}
+                                                    onClick={() => setOpenRegistrationDialog(true)}
                                                 >
                                                     +
                                                 </Button>
@@ -464,6 +468,7 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                                                         minWidth: '40px',
                                                         padding: '0 8px'
                                                     }}
+                                                    onClick={() => setOpenRegistrationDialog(true)}
                                                 >
                                                     +
                                                 </Button>
@@ -794,6 +799,7 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                     Bỏ qua
                 </Button>
             </DialogActions>
+            <RegistrationDialog open={openRegistrationDialog} onClose={() => setOpenRegistrationDialog(false)} />
         </Dialog>
     );
 }
