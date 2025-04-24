@@ -175,12 +175,9 @@ const authService = {
     }
   },
 
-  changePassword: async (oldPassword, newPassword) => {
+  changePassword: async (passwordData) => {
     try {
-      const response = await axiosInstance.post('/auth/change-password', {
-        oldPassword,
-        newPassword
-      });
+      const response = await axiosInstance.post('/auth/change-password', passwordData);
 
       return {
         success: response.data.success,
@@ -188,7 +185,7 @@ const authService = {
       };
     } catch (error) {
       console.error('Change password error:', error);
-      throw error.response?.data?.message || error.message || 'Lỗi đổi mật khẩu';
+      throw error.response?.data || { message: 'Lỗi đổi mật khẩu' };
     }
   },
 

@@ -49,15 +49,19 @@ function PasswordChangeDialog({ open, onClose }) {
         }
 
         try {
-            // Gọi API đổi mật khẩu từ authService
-            const response = await authService.changePassword(currentPassword, newPassword);
+            // Gọi API đổi mật khẩu từ authService với payload phù hợp với backend DTO
+            const response = await authService.changePassword({
+                oldPassword: currentPassword,
+                newPassword: newPassword,
+                confirmNewPassword: confirmPassword
+            });
 
             if (response.success) {
                 setSuccess(true);
                 setError('');
                 console.log('Đổi mật khẩu thành công:', response.message);
 
-                // T HIST tự động đóng dialog sau 2 giây
+                // Tự động đóng dialog sau 2 giây
                 setTimeout(() => {
                     handleClose();
                 }, 2000);
@@ -65,7 +69,7 @@ function PasswordChangeDialog({ open, onClose }) {
                 setError(response.message || 'Đổi mật khẩu không thành công');
             }
         } catch (error) {
-            setError(error || 'Lỗi khi đổi mật khẩu. Vui lòng thử lại.');
+            setError(error.message || 'Lỗi khi đổi mật khẩu. Vui lòng thử lại.');
             console.error('Error changing password:', error);
         }
     };

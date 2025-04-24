@@ -30,7 +30,7 @@ export default function BookingSummaryCard() {
     ];
 
     return (
-        <Card sx={{ p: 3, maxWidth: 400 , borderRadius: 3, boxShadow: 3  }}>
+        <Card sx={{ p: 3 , borderRadius: 3, boxShadow: 3  }}>
             {/* Header */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 , height: 20, width: 380}}>
                 <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold', textTransform: 'uppercase' }}>

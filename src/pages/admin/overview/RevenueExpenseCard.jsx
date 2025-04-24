@@ -38,7 +38,7 @@ export default function RevenueExpenseCard() {
     const expenseBarHeight = (totalExpense / maxValue) * revenueBarHeight;
 
     return (
-        <Card sx={{ p: 3, maxWidth: 400, borderRadius: 3, boxShadow: 3 }}>
+        <Card sx={{ p: 3,  borderRadius: 3, boxShadow: 3 }}>
             <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'space-between' }}>
                 {/* Left content */}
                 <Box sx={{ flex: 1, pr: 2, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
