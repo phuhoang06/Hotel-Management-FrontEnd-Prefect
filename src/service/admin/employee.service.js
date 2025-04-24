@@ -53,8 +53,12 @@ class EmployeeService {
     }
 
 
-    static async updateEmployee(id, employee) {
-        return await axiosInstance.put(`/employees/${id}`, employee);
+    static async updateEmployee(id, formData) {
+        return await axiosInstance.put(`/employees/${id}/edit`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
     }
 
     static async getAllUsers() {

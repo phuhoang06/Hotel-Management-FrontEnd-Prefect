@@ -12,7 +12,7 @@ function DataTable({
                        loading,
                        handleOpenEditDialog,
                        columnOptions,
-                       refreshData // Thêm prop refreshData để có thể làm mới dữ liệu từ DataTable
+                       refreshData
                    }) {
     return (
         <Box sx={{
