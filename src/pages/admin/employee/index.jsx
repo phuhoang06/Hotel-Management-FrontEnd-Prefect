@@ -29,7 +29,7 @@ function Employee() {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const columnOptions = [
-        { label: 'Ảnh', key: 'image' },
+        { label: 'Ảnh', key: 'imgUrl' },
         { label: 'Mã nhân viên', key: 'user_id' },
         { label: 'Tên nhân viên', key: 'fullName' },
         { label: 'Mã chấm công', key: 'user_id' },
@@ -56,6 +56,7 @@ function Employee() {
             setLoading(true);
             try {
                 const response = await EmployeeService.getAllEmployee();
+                console.log(response);
                 if (response && response.data) {
                     setEmployees(response.data.content || []);
                     console.log('Dữ liệu nhân viên đã được tải:', response.data.content);

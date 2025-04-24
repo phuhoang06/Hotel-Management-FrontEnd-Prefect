@@ -11,6 +11,8 @@ import UserService from "../../../service/admin/user.service.js";
 function EmployeeRow({ row, selectedRows, handleRowSelect, selectedColumns, handleOpenEditDialog, columnOptions }) {
     const [open, setOpen] = useState(false);
     const [locked, setLocked] = useState(row.locked || false);
+    console.log("Employee row data:", row);
+
 
     const detailedInfo = columnOptions
         .filter((option) => option.label !== 'Ảnh')
@@ -70,7 +72,7 @@ function EmployeeRow({ row, selectedRows, handleRowSelect, selectedColumns, hand
                     >
                         {col === 'Ảnh' ? (
                             <img
-                                src={row.image || placeholderImage}
+                                src={row.imgUrl ? (row.imgUrl.startsWith('http') ? row.imgUrl : `http://localhost:8080/${row.imgUrl}`) : placeholderImage}
                                 alt="Employee"
                                 style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }}
                             />
@@ -95,7 +97,7 @@ function EmployeeRow({ row, selectedRows, handleRowSelect, selectedColumns, hand
                                             Ảnh:
                                         </Typography>
                                         <img
-                                            src={row.image || placeholderImage}
+                                            src={row.imgUrl ? (row.imgUrl.startsWith('http') ? row.imgUrl : `http://localhost:8080/${row.imgUrl}`) : placeholderImage}
                                             alt="Employee"
                                             style={{
                                                 width: '150px',

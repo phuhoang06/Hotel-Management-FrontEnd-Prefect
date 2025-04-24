@@ -40,6 +40,10 @@ function EditEmployeeDialog({ open, onClose, employeeData, onEditSuccess }) {
     const [accounts, setAccounts] = useState([]);
     const [imageFile, setImageFile] = useState(null);
 
+    useEffect(() => {
+        console.log("employeeData received in EditEmployeeDialog:", employeeData);
+    }, [employeeData]);
+
     // Error message mapping
     const errorMessages = {
         "ID Card already exists": "Số CMND/CCCD đã tồn tại",
@@ -148,10 +152,13 @@ function EditEmployeeDialog({ open, onClose, employeeData, onEditSuccess }) {
         },
     });
 
-    // Update image preview
+
     useEffect(() => {
         if (employeeData?.imgUrl) {
-            setImagePreview(employeeData.imgUrl);
+            const imageUrl = employeeData.imgUrl.startsWith('http')
+                ? employeeData.imgUrl
+                : `http://localhost:8080/${employeeData.imgUrl}`;
+            setImagePreview(imageUrl);
         } else {
             setImagePreview(null);
         }
@@ -252,7 +259,7 @@ function EditEmployeeDialog({ open, onClose, employeeData, onEditSuccess }) {
                                 />
                             ) : (
                                 <IconButton>
-                                    <CameraAltIcon sx={{ color: '#999' }} />
+                                    <CameraAltIcon sx={{color: '#999'}}/>
                                 </IconButton>
                             )}
                         </Box>
