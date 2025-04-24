@@ -35,6 +35,7 @@ function Employee() {
     const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [actionAnchorEl, setActionAnchorEl] = useState(null);
+    const [menuType, setMenuType] = useState(null); // Thêm state để lưu loại menu
 
     const columnOptions = [
         { label: 'Ảnh', key: 'image' },
@@ -196,6 +197,16 @@ function Employee() {
 
     const handleSnackbarClose = () => setOpenSnackbar(false);
 
+    const handleActionMenuClick = (e, type) => {
+        setActionAnchorEl(e.currentTarget);
+        setMenuType(type); // Lưu loại menu ('columnMenu' hoặc 'actionMenu')
+    };
+
+    const handleActionMenuClose = () => {
+        setActionAnchorEl(null);
+        setMenuType(null); // Reset loại menu khi đóng
+    };
+
     return (
         <Grid container spacing={0.5}>
             <Grid size={{ xs: 4, md: 2.4 }}>
@@ -207,9 +218,10 @@ function Employee() {
                     setSearchTerm={setSearchTerm}
                     loading={loading}
                     selectedRows={selectedRows}
-                    handleActionMenuClick={(e) => setActionAnchorEl(e.currentTarget)}
-                    handleActionMenuClose={() => setActionAnchorEl(null)}
+                    handleActionMenuClick={handleActionMenuClick}
+                    handleActionMenuClose={handleActionMenuClose}
                     actionAnchorEl={actionAnchorEl}
+                    menuType={menuType} // Truyền menuType xuống ActionBar
                     handleDeleteSelected={handleDeleteSelected}
                     handleOpenAddDialog={handleOpenAddDialog}
                     columnOptions={columnOptions}

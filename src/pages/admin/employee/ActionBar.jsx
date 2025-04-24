@@ -15,6 +15,7 @@ function ActionBar({
                        handleActionMenuClick,
                        handleActionMenuClose,
                        actionAnchorEl,
+                       menuType,
                        handleDeleteSelected,
                        handleOpenAddDialog,
                        columnOptions,
@@ -45,13 +46,18 @@ function ActionBar({
                                 fontSize: '12px',
                                 '& .MuiButton-startIcon': { marginRight: '4px' }
                             }}
-                            onClick={handleActionMenuClick}
+                            onClick={(e) => handleActionMenuClick(e, 'actionMenu')} // Thêm type 'actionMenu'
                             disabled={loading}
                         >
                             Thao tác
                         </Button>
                     </PermissionGuard>
-                    <Menu anchorEl={actionAnchorEl} open={Boolean(actionAnchorEl)} onClose={handleActionMenuClose} disableAutoFocusItem={true}>
+                    <Menu
+                        anchorEl={actionAnchorEl}
+                        open={Boolean(actionAnchorEl) && menuType === 'actionMenu'} // Sử dụng menuType để kiểm tra
+                        onClose={handleActionMenuClose}
+                        disableAutoFocusItem={true}
+                    >
                         <MenuItem onClick={handleDeleteSelected}>Xóa</MenuItem>
                     </Menu>
                 </>
@@ -118,8 +124,8 @@ function ActionBar({
                 </IconButton>
                 <Menu
                     anchorEl={actionAnchorEl}
-                    open={Boolean(actionAnchorEl && actionAnchorEl.id === 'columnMenu')}
-                    onClose={() => handleActionMenuClose()}
+                    open={Boolean(actionAnchorEl) && menuType === 'columnMenu'}
+                    onClose={handleActionMenuClose}
                     PaperProps={{ style: { maxHeight: 400, width: 350 } }}
                     disableAutoFocusItem={true}
                 >
@@ -128,9 +134,14 @@ function ActionBar({
                             {columnOptions.slice(0, 10).map((option) => (
                                 <FormControlLabel
                                     key={option.label}
-                                    control={<Checkbox checked={selectedColumns.includes(option.label)}
-                                                       onChange={() => handleColumnToggle(option.label)}
-                                                       size="small" sx={{ p: 0.8 }} />}
+                                    control={
+                                        <Checkbox
+                                            checked={selectedColumns.includes(option.label)}
+                                            onChange={() => handleColumnToggle(option.label)}
+                                            size="small"
+                                            sx={{ p: 0.8 }}
+                                        />
+                                    }
                                     label={<Typography variant="body2" sx={{ fontSize: '12px' }}>{option.label}</Typography>}
                                     sx={{ '& .MuiFormControlLabel-label': { fontSize: '12px' }, ml: 1 }}
                                 />
@@ -140,9 +151,14 @@ function ActionBar({
                             {columnOptions.slice(10).map((option) => (
                                 <FormControlLabel
                                     key={option.label}
-                                    control={<Checkbox checked={selectedColumns.includes(option.label)}
-                                                       onChange={() => handleColumnToggle(option.label)}
-                                                       size="small" sx={{ p: 0.8 }} />}
+                                    control={
+                                        <Checkbox
+                                            checked={selectedColumns.includes(option.label)}
+                                            onChange={() => handleColumnToggle(option.label)}
+                                            size="small"
+                                            sx={{ p: 0.8 }}
+                                        />
+                                    }
                                     label={<Typography variant="body2" sx={{ fontSize: '12px' }}>{option.label}</Typography>}
                                     sx={{ '& .MuiFormControlLabel-label': { fontSize: '12px' }, ml: 1 }}
                                 />
