@@ -10,6 +10,16 @@ class EmployeeService {
         return await axiosInstance.get(`/employees?page=${page}&size=${size}`);
     }
 
+
+// Tìm kiếm theo từ khóa (input) không cần phân trang
+    static async searchByPosition(position) {
+        if (!position) {
+            return await axiosInstance.get('/employees');
+        }
+        return await axiosInstance.get(`/employees?position=${encodeURIComponent(position)}`);
+    }
+
+
     /**
      * Xóa nhân viên theo ID
      * @param {number} id - ID nhân viên 

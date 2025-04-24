@@ -11,7 +11,7 @@ import ActionBar from './ActionBar.jsx';
 
 function Employee() {
     const [selectedColumns, setSelectedColumns] = useState([
-         'Tên nhân viên', 'Số điện thoại',
+        'Tên nhân viên', 'Số điện thoại',
         'Số CMND/CCCD', 'Địa chỉ', 'Chức vụ', 'Ghi chú'
     ]);
     const [selectedRows, setSelectedRows] = useState([]);
@@ -27,6 +27,7 @@ function Employee() {
     const [actionAnchorEl, setActionAnchorEl] = useState(null);
     const [menuType, setMenuType] = useState(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [searchTerm, setSearchTerm] = useState("");
 
     const columnOptions = [
         { label: 'Ảnh', key: 'imgUrl' },
@@ -55,12 +56,19 @@ function Employee() {
         const loadEmployees = async () => {
             setLoading(true);
             try {
-                const response = await EmployeeService.getAllEmployee();
-                console.log(response);
+                let response;
+
+                if (searchTerm) {
+                    // Nếu có từ khóa tìm kiếm, sử dụng API tìm kiếm theo position
+                    response = await EmployeeService.searchByPosition(searchTerm);
+                } else {
+                    // Nếu không có từ khóa, lấy tất cả
+                    response = await EmployeeService.getAllEmployee();
+                }
+
                 if (response && response.data) {
                     setEmployees(response.data.content || []);
-                    console.log('Dữ liệu nhân viên đã được tải:', response.data.content);
-                    toast.success("Thành công lấy ra dữ liệu từ API");
+                    console.log('Dữ liệu nhân viên đã được tải:', response.data);
                 }
             } catch (error) {
                 console.error('Lỗi khi lấy danh sách nhân viên:', error);
@@ -72,10 +80,15 @@ function Employee() {
         };
 
         loadEmployees();
-    }, [refreshTrigger]);
+    }, [searchTerm, refreshTrigger]);
 
     const refreshEmployeeData = () => {
         setRefreshTrigger(prev => prev + 1);
+    };
+
+    const handleSetSearchTerm = (term) => {
+        console.log("Tìm kiếm với từ khóa:", term);
+        setSearchTerm(term);
     };
 
     const handleColumnToggle = (label) => {
@@ -176,6 +189,8 @@ function Employee() {
             </Grid>
             <Grid size={{ xs: 6, md: 9.5 }}>
                 <ActionBar
+                    searchTerm={searchTerm}
+                    setSearchTerm={handleSetSearchTerm}
                     loading={loading}
                     selectedRows={selectedRows}
                     handleActionMenuClick={handleActionMenuClick}
@@ -187,7 +202,6 @@ function Employee() {
                     columnOptions={columnOptions}
                     selectedColumns={selectedColumns}
                     handleColumnToggle={handleColumnToggle}
-                    refreshData={refreshEmployeeData}
                 />
                 <DataTable
                     employees={employees}
