@@ -1,8 +1,19 @@
 import React from 'react';
-import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Checkbox, CircularProgress } from '@mui/material';
+import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Checkbox, CircularProgress, Button, IconButton } from '@mui/material';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import EmployeeRow from './EmployeeRow.jsx';
 
-function DataTable({ employees, selectedColumns, selectedRows, handleRowSelect, handleSelectAllRows, loading, handleOpenEditDialog, columnOptions }) {
+function DataTable({
+                       employees,
+                       selectedColumns,
+                       selectedRows,
+                       handleRowSelect,
+                       handleSelectAllRows,
+                       loading,
+                       handleOpenEditDialog,
+                       columnOptions,
+                       refreshData // Thêm prop refreshData để có thể làm mới dữ liệu từ DataTable
+                   }) {
     return (
         <Box sx={{
             mt: 3,
@@ -12,6 +23,16 @@ function DataTable({ employees, selectedColumns, selectedRows, handleRowSelect, 
             boxShadow: 1,
             backgroundColor: '#ffffff'
         }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1 }}>
+                <IconButton
+                    onClick={refreshData}
+                    disabled={loading}
+                    title="Làm mới dữ liệu"
+                    size="small"
+                >
+                    <RefreshIcon />
+                </IconButton>
+            </Box>
             <TableContainer component={Paper}>
                 <Table aria-label="collapsible table">
                     <TableHead sx={{ backgroundColor: '#eaf2ff' }}>
@@ -63,6 +84,15 @@ function DataTable({ employees, selectedColumns, selectedRows, handleRowSelect, 
                             <TableRow>
                                 <TableCell colSpan={selectedColumns.length + 2} align="center">
                                     <Typography variant="body1" sx={{ my: 3 }}>Không có dữ liệu nhân viên</Typography>
+                                    <Button
+                                        variant="contained"
+                                        size="small"
+                                        onClick={refreshData}
+                                        startIcon={<RefreshIcon />}
+                                        sx={{ mt: 1 }}
+                                    >
+                                        Làm mới dữ liệu
+                                    </Button>
                                 </TableCell>
                             </TableRow>
                         )}

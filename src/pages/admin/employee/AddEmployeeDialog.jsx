@@ -25,9 +25,10 @@ const VisuallyHiddenInput = styled('input')({
     width: 1,
 });
 
-function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
+function AddEmployeeDialog({ open, onClose, isEditMode, employeeData, onAddSuccess }) {
     const [imagePreview, setImagePreview] = useState(null);
     const [accounts, setAccounts] = useState([]);
+    const [imageFile, setImageFile] = useState(null);
 
     // Fetch accounts for userId selection
     useEffect(() => {
@@ -86,30 +87,26 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
             address: employeeData?.address || "",
             position: employeeData?.position || "",
             department: employeeData?.department || "",
-            startDate: employeeData?.startDate ||"",
+            startDate: employeeData?.startDate || "",
             note: employeeData?.note || "",
             imgUrl: employeeData?.imgUrl || "",
         },
         enableReinitialize: true,
         validationSchema,
-        // Sửa trong AddEmployeeDialog.jsx, thay đổi hàm submit của formik:
         onSubmit: (values) => {
-            // Tạo FormData object để gửi dữ liệu và file
             const formData = new FormData();
-
-            // Thêm thông tin nhân viên dưới dạng JSON string
             formData.append('employee', JSON.stringify(values));
-
-            // Thêm file ảnh nếu có
-            if (imageFile) { // Cần theo dõi file hình ảnh đã chọn
+            if (imageFile) {
                 formData.append('image', imageFile);
             }
 
-            // Gọi service sửa lại
             EmployeeService.addEmployeeWithImage(formData)
                 .then(() => {
                     toast.success(isEditMode ? "Cập nhật nhân viên thành công" : "Thêm nhân viên thành công");
                     handleClose();
+                    if (!isEditMode && onAddSuccess) {
+                        onAddSuccess(); // Gọi onAddSuccess để kích hoạt làm mới dữ liệu
+                    }
                 })
                 .catch((err) => {
                     if (err.response && err.response.status === 403) {
@@ -122,7 +119,6 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
         },
     });
 
-
     useEffect(() => {
         if (isEditMode && employeeData?.imgUrl) {
             setImagePreview(employeeData.imgUrl);
@@ -131,24 +127,20 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
         }
     }, [isEditMode, employeeData]);
 
-
-    const [imageFile, setImageFile] = useState(null);
-
-
     const handleImageUpload = (event) => {
         const file = event.target.files[0];
         if (file) {
-            setImageFile(file); // Lưu file để gửi lên server
+            setImageFile(file);
             const imageUrl = URL.createObjectURL(file);
             setImagePreview(imageUrl);
             formik.setFieldValue('imgUrl', imageUrl);
         }
     };
 
-
     const handleClose = () => {
         formik.resetForm();
         setImagePreview(null);
+        setImageFile(null);
         onClose();
     };
 
