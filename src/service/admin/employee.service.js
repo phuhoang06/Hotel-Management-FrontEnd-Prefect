@@ -40,8 +40,16 @@ class EmployeeService {
      * Thêm nhân viên mới
      * @param {Object} employee - Thông tin nhân viên
      */
-    static async addEmployee(employee) {
-        return await axiosInstance.post(`/employees`, employee);
+    /**
+     * Thêm nhân viên mới với hình ảnh
+     * @param {FormData} formData - FormData chứa thông tin nhân viên và hình ảnh
+     */
+    static async addEmployeeWithImage(formData) {
+        return await axiosInstance.post('/employees', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
     }
 
 
