@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
-import { TableRow, TableCell, Checkbox, IconButton, Collapse, Box, Typography, Grid, Button } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import {
+    TableRow, TableCell, Checkbox, IconButton, Collapse,
+    Box, Typography, Grid, Button
+} from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
@@ -11,8 +14,23 @@ import UserService from "../../../service/admin/user.service.js";
 function EmployeeRow({ row, selectedRows, handleRowSelect, selectedColumns, handleOpenEditDialog, columnOptions }) {
     const [open, setOpen] = useState(false);
     const [locked, setLocked] = useState(row.locked || false);
-    console.log("Employee row data:", row);
+    const placeholderImage = '';
 
+    // Cập nhật trạng thái locked mỗi khi mở dòng
+    useEffect(() => {
+        const fetchLockStatus = async () => {
+            try {
+                const res = await UserService.getByIdLock(row.userId);
+                setLocked(res.data.locked);
+            } catch (err) {
+                console.error("Lỗi khi lấy trạng thái locked:", err);
+            }
+        };
+
+        if (open) {
+            fetchLockStatus();
+        }
+    }, [open, row.userId]);
 
     const detailedInfo = columnOptions
         .filter((option) => option.label !== 'Ảnh')
@@ -23,7 +41,6 @@ function EmployeeRow({ row, selectedRows, handleRowSelect, selectedColumns, hand
 
     const column2 = detailedInfo.slice(0, 9);
     const column3 = detailedInfo.slice(9);
-    const placeholderImage = '';
 
     const handleLockToggle = async () => {
         try {
@@ -82,6 +99,7 @@ function EmployeeRow({ row, selectedRows, handleRowSelect, selectedColumns, hand
                     </TableCell>
                 ))}
             </TableRow>
+
             <TableRow>
                 <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={selectedColumns.length + 2}>
                     <Collapse in={open} timeout="auto" unmountOnExit>
@@ -127,14 +145,16 @@ function EmployeeRow({ row, selectedRows, handleRowSelect, selectedColumns, hand
                                     ))}
                                 </Grid>
                             </Grid>
+
                             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 3, mb: 7 }}>
                                 <Button
                                     variant="outlined"
                                     onClick={handleLockToggle}
                                     startIcon={locked ? <LockIcon /> : <LockOpenIcon />}
                                 >
-                                    {locked ? 'Lock Off' : 'Lock On'}
+                                    {locked ? 'Mở khóa' : 'Khóa tài khoản'}
                                 </Button>
+
                                 <Button variant="contained" size="small"
                                         sx={{
                                             backgroundColor: '#1976d2',
@@ -144,6 +164,7 @@ function EmployeeRow({ row, selectedRows, handleRowSelect, selectedColumns, hand
                                         }}>
                                     Lấy mã xác nhận
                                 </Button>
+
                                 <PermissionGuard permissions="UPDATE_EMPLOYEE">
                                     <Button
                                         variant="contained"
@@ -159,6 +180,7 @@ function EmployeeRow({ row, selectedRows, handleRowSelect, selectedColumns, hand
                                         Cập nhật
                                     </Button>
                                 </PermissionGuard>
+
                                 <Button variant="contained" size="small" sx={{
                                     backgroundColor: '#d32f2f',
                                     textTransform: 'none',

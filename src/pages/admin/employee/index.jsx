@@ -11,7 +11,7 @@ import ActionBar from './ActionBar.jsx';
 
 function Employee() {
     const [selectedColumns, setSelectedColumns] = useState([
-        'Mã nhân viên', 'Tên nhân viên', 'Số điện thoại',
+         'Tên nhân viên', 'Số điện thoại',
         'Số CMND/CCCD', 'Địa chỉ', 'Chức vụ', 'Ghi chú'
     ]);
     const [selectedRows, setSelectedRows] = useState([]);
