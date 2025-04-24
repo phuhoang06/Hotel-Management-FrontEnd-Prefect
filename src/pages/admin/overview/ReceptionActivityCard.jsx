@@ -35,7 +35,7 @@ export default function ReceptionActivityCard() {
     ];
 
     return (
-        <Card sx={{ p: 3, maxWidth: 660, borderRadius: 3, boxShadow: 3 }}>
+        <Card sx={{ p: 3,  borderRadius: 3, boxShadow: 3 }}>
             {/* Header */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, width: 600, height:12 }}>
                 <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold', textTransform: 'uppercase' }}>
