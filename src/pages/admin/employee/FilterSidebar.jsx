@@ -3,7 +3,7 @@ import { Box, Typography, FormControlLabel, Checkbox, FormControl, Select, MenuI
 import AddIcon from '@mui/icons-material/Add';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
-function FilterSidebar({ size, setSize }) {
+function FilterSidebar({ size, setSize, refreshData }) {
     return (
         <>
             <Box sx={{ mt: 2 }}>

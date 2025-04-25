@@ -12,7 +12,10 @@ function DataTable({
                        loading,
                        handleOpenEditDialog,
                        columnOptions,
-                       refreshData
+                       refreshData,
+                       page,
+                       totalPages,
+                       handlePageChange
                    }) {
     return (
         <Box sx={{
@@ -111,6 +114,25 @@ function DataTable({
                     </TableBody>
                 </Table>
             </TableContainer>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
+                <Button
+                    variant="outlined"
+                    disabled={page === 0 || loading}
+                    onClick={() => handlePageChange(page - 1)}
+                >
+                    Previous
+                </Button>
+                <Typography variant="body2">
+                    Page {page + 1} of {totalPages}
+                </Typography>
+                <Button
+                    variant="outlined"
+                    disabled={page >= totalPages - 1 || loading}
+                    onClick={() => handlePageChange(page + 1)}
+                >
+                    Next
+                </Button>
+            </Box>
         </Box>
     );
 }

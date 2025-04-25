@@ -11,8 +11,7 @@ import ActionBar from './ActionBar.jsx';
 
 function Employee() {
     const [selectedColumns, setSelectedColumns] = useState([
-        'Tên nhân viên', 'Số điện thoại',
-        'Số CMND/CCCD', 'Địa chỉ', 'Chức vụ', 'Ghi chú'
+        'Tên nhân viên', 'Số điện thoại', 'Số CMND/CCCD', 'Địa chỉ', 'Chức vụ', 'Ghi chú'
     ]);
     const [selectedRows, setSelectedRows] = useState([]);
     const [employees, setEmployees] = useState([]);
@@ -27,7 +26,10 @@ function Employee() {
     const [actionAnchorEl, setActionAnchorEl] = useState(null);
     const [menuType, setMenuType] = useState(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
-    const [searchTerm, setSearchTerm] = useState("");
+    const [searchTerm, setSearchTerm] = useState('');
+    const [page, setPage] = useState(0);
+    const [size, setSize] = useState(10);
+    const [totalPages, setTotalPages] = useState(0);
 
     const columnOptions = [
         { label: 'Ảnh', key: 'imgUrl' },
@@ -59,28 +61,30 @@ function Employee() {
                 let response;
 
                 if (searchTerm) {
-                    // Nếu có từ khóa tìm kiếm, sử dụng API tìm kiếm theo position
-                    response = await EmployeeService.searchByPosition(searchTerm);
+                    // Tìm kiếm với phân trang
+                    response = await EmployeeService.searchByPosition(searchTerm, page, size);
                 } else {
-                    // Nếu không có từ khóa, lấy tất cả
-                    response = await EmployeeService.getAllEmployee();
+                    // Lấy tất cả với phân trang
+                    response = await EmployeeService.getAllEmployee(page, size);
                 }
 
                 if (response && response.data) {
                     setEmployees(response.data.content || []);
+                    setTotalPages(response.data.totalPages || 0);
                     console.log('Dữ liệu nhân viên đã được tải:', response.data);
                 }
             } catch (error) {
                 console.error('Lỗi khi lấy danh sách nhân viên:', error);
                 toast.error('Không thể tải danh sách nhân viên');
                 setEmployees([]);
+                setTotalPages(0);
             } finally {
                 setLoading(false);
             }
         };
 
         loadEmployees();
-    }, [searchTerm, refreshTrigger]);
+    }, [searchTerm, page, size, refreshTrigger]);
 
     const refreshEmployeeData = () => {
         setRefreshTrigger(prev => prev + 1);
@@ -89,6 +93,16 @@ function Employee() {
     const handleSetSearchTerm = (term) => {
         console.log("Tìm kiếm với từ khóa:", term);
         setSearchTerm(term);
+        setPage(0); // Reset về trang đầu khi tìm kiếm
+    };
+
+    const handlePageChange = (newPage) => {
+        setPage(newPage);
+    };
+
+    const handleSetSize = (newSize) => {
+        setSize(newSize);
+        setPage(0); // Reset về trang đầu khi thay đổi số bản ghi
     };
 
     const handleColumnToggle = (label) => {
@@ -184,6 +198,8 @@ function Employee() {
         <Grid container spacing={0.5}>
             <Grid size={{ xs: 4, md: 2.4 }}>
                 <FilterSidebar
+                    size={size}
+                    setSize={handleSetSize}
                     refreshData={refreshEmployeeData}
                 />
             </Grid>
@@ -212,6 +228,10 @@ function Employee() {
                     loading={loading}
                     handleOpenEditDialog={handleOpenEditDialog}
                     columnOptions={columnOptions}
+                    refreshData={refreshEmployeeData}
+                    page={page}
+                    totalPages={totalPages}
+                    handlePageChange={handlePageChange}
                 />
                 <AddEmployee
                     open={openAddDialog}
