@@ -10,6 +10,16 @@ class EmployeeService {
         return await axiosInstance.get(`/employees?page=${page}&size=${size}`);
     }
 
+
+// Tìm kiếm theo từ khóa (input) không cần phân trang
+    static async searchByPosition(position) {
+        if (!position) {
+            return await axiosInstance.get('/employees');
+        }
+        return await axiosInstance.get(`/employees?position=${encodeURIComponent(position)}`);
+    }
+
+
     /**
      * Xóa nhân viên theo ID
      * @param {number} id - ID nhân viên 
@@ -40,13 +50,25 @@ class EmployeeService {
      * Thêm nhân viên mới
      * @param {Object} employee - Thông tin nhân viên
      */
-    static async addEmployee(employee) {
-        return await axiosInstance.post(`/employees`, employee);
+    /**
+     * Thêm nhân viên mới với hình ảnh
+     * @param {FormData} formData - FormData chứa thông tin nhân viên và hình ảnh
+     */
+    static async addEmployeeWithImage(formData) {
+        return await axiosInstance.post('/employees', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
     }
 
 
-    static async updateEmployee(id, employee) {
-        return await axiosInstance.put(`/employees/${id}`, employee);
+    static async updateEmployee(id, formData) {
+        return await axiosInstance.put(`/employees/${id}/edit`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
     }
 
     static async getAllUsers() {

@@ -1,9 +1,34 @@
-import React from 'react';
-import { Box, InputBase, CircularProgress } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, InputBase, CircularProgress, IconButton } from '@mui/material';
 import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from '@mui/icons-material/Clear';
 
+function SearchBar({ onSearch, loading }) {
+    const [inputValue, setInputValue] = useState("");
 
-function SearchBar({ searchTerm, setSearchTerm, loading }) {
+    // Xử lý khi người dùng nhấn Enter
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            onSearch(inputValue);
+        }
+    };
+
+    // Xử lý khi người dùng thay đổi nội dung input
+    const handleChange = (e) => {
+        setInputValue(e.target.value);
+    };
+
+    // Xử lý khi người dùng nhấn nút tìm kiếm
+    const handleSearchClick = () => {
+        onSearch(inputValue);
+    };
+
+    // Xử lý khi người dùng nhấn nút xóa
+    const handleClearClick = () => {
+        setInputValue("");
+        onSearch("");
+    };
+
     return (
         <Box sx={{
             display: 'flex',
@@ -19,17 +44,36 @@ function SearchBar({ searchTerm, setSearchTerm, loading }) {
             backgroundColor: '#ffffff',
             boxShadow: 1
         }}>
-            <SearchIcon sx={{ fontSize: 20, color: 'gray', mr: 1 }} />
+            <IconButton
+                sx={{ p: 0.5 }}
+                onClick={handleSearchClick}
+                disabled={loading}
+            >
+                <SearchIcon sx={{ fontSize: 18, color: 'gray' }} />
+            </IconButton>
+
             <InputBase
-                placeholder="Tìm theo mã chấm công, tên nhân viên"
-                sx={{ fontSize: 14, flex: 1 }}
+                placeholder="Tìm theo chức vụ (vd: Receptionist)"
+                sx={{ fontSize: 14, flex: 1, ml: 1 }}
                 inputProps={{ 'aria-label': 'search employee' }}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={inputValue}
+                onChange={handleChange}
+                onKeyDown={handleKeyDown}
                 disabled={loading}
             />
-            {loading && searchTerm && (
-                <CircularProgress size={20} sx={{ mr: 1 }} />
+
+            {inputValue && (
+                <IconButton
+                    sx={{ p: 0.5 }}
+                    onClick={handleClearClick}
+                    disabled={loading}
+                >
+                    <ClearIcon sx={{ fontSize: 16, color: 'gray' }} />
+                </IconButton>
+            )}
+
+            {loading && (
+                <CircularProgress size={18} sx={{ ml: 1 }} />
             )}
         </Box>
     );

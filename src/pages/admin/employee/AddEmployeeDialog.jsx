@@ -2,111 +2,149 @@ import React, { useState, useEffect } from 'react';
 import {
     Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton, Tabs, Tab,
     Grid, Box, Typography, TextField, FormControl, Select, MenuItem, RadioGroup, FormControlLabel,
-    Radio, InputAdornment
+    Radio
 } from '@mui/material';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import ClearIcon from '@mui/icons-material/Clear';
-import EditIcon from '@mui/icons-material/Edit';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { styled } from '@mui/material/styles';
 import { useFormik } from "formik";
+import * as Yup from "yup";
 import EmployeeService from "../../../service/admin/employee.service.js";
 import {toast} from "react-toastify";
 import { RegistrationDialog } from './EmployeeRegistrationForm';
 
-function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
-    const VisuallyHiddenInput = styled('input')({
-        clip: 'rect(0 0 0 0)',
-        clipPath: 'inset(50%)',
-        height: 1,
-        overflow: 'hidden',
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        whiteSpace: 'nowrap',
-        width: 1,
-    });
+const VisuallyHiddenInput = styled('input')({
+    clip: 'rect(0 0 0 0)',
+    clipPath: 'inset(50%)',
+    height: 1,
+    overflow: 'hidden',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    whiteSpace: 'nowrap',
+    width: 1,
+});
 
-    // Dữ liệu giả lập cho tỉnh và quận/huyện
-    const mockProvinces = [
-        { id: "01", full_name: "Hà Nội" },
-        { id: "02", full_name: "Hồ Chí Minh" },
-    ];
-
-    const mockDistricts = {
-        "01": [
-            { id: "006", full_name: "Đống Đa" },
-            { id: "007", full_name: "Ba Đình" },
-        ],
-        "02": [
-            { id: "001", full_name: "Quận 1" },
-            { id: "002", full_name: "Quận 3" },
-        ],
-    };
-
-    const [provinces] = useState(mockProvinces);
-    const [districts, setDistricts] = useState([]);
+function AddEmployeeDialog({ open, onClose, isEditMode, employeeData, onAddSuccess }) {
     const [imagePreview, setImagePreview] = useState(null);
     const [openRegistrationDialog, setOpenRegistrationDialog] = useState(false);
 
     // Dữ liệu tài khoản
     const [accounts, setAccounts] = useState([]);
+    const [imageFile, setImageFile] = useState(null);
+
+    // Ánh xạ thông điệp lỗi từ server sang tiếng Việt
+    const errorMessages = {
+        "ID Card already exists": "Số CMND/CCCD đã tồn tại",
+        "User is already linked to another employee": "Tài khoản này đã được liên kết với nhân viên khác",
+        "Validation Failed": "Xác thực thất bại",
+    };
+
+    // Fetch accounts for userId selection
     useEffect(() => {
         EmployeeService.getAllUsers().then(res => {
             setAccounts(res.data);
-            console.log(res);
-        })
+        }).catch(err => {
+            toast.error("Không thể tải danh sách tài khoản.");
+        });
     }, []);
 
+    // Yup validation schema based on Java annotations
+    const validationSchema = Yup.object({
+        userId: Yup.number()
+            .required("ID người dùng là bắt buộc"),
+        fullName: Yup.string()
+            .required("Họ và tên không được để trống")
+            .max(100, "Họ và tên tối đa 100 ký tự"),
+        gender: Yup.string()
+            .required("Giới tính là bắt buộc")
+            .oneOf(["MALE", "FEMALE"], "Giới tính không hợp lệ"),
+        dob: Yup.date()
+            .required("Ngày sinh là bắt buộc")
+            .max(new Date(), "Ngày sinh phải nằm trong quá khứ")
+            .typeError("Định dạng ngày không hợp lệ"),
+        phone: Yup.string()
+            .matches(/^[0-9]{10,15}$/, "Số điện thoại phải có 10–15 chữ số")
+            .required("Số điện thoại là bắt buộc"),
+        idCard: Yup.string()
+            .matches(/^[A-Z0-9]{5,20}$/, "CMND/CCCD phải có 5–20 ký tự, chỉ gồm chữ cái và số")
+            .required("CMND/CCCD là bắt buộc"),
+        address: Yup.string()
+            .max(255, "Địa chỉ tối đa 255 ký tự"),
+        position: Yup.string()
+            .max(100, "Chức danh tối đa 100 ký tự"),
+        department: Yup.string()
+            .max(100, "Phòng ban tối đa 100 ký tự"),
+        startDate: Yup.date()
+            .required("Ngày bắt đầu là bắt buộc")
+            .max(new Date(), "Ngày bắt đầu không được nằm trong tương lai")
+            .typeError("Định dạng ngày không hợp lệ"),
+        note: Yup.string()
+            .max(65535, "Ghi chú quá dài"),
+        imgUrl: Yup.string()
+            .max(255, "URL ảnh không được vượt quá 255 ký tự"),
+    });
 
-
-    // Sử dụng Formik để quản lý dữ liệu form
+    // Formik setup
     const formik = useFormik({
         initialValues: {
             userId: employeeData?.userId || "",
             fullName: employeeData?.fullName || "",
-            phone: employeeData?.phone || "",
-            startDate: employeeData?.startDate || "",
-            department: employeeData?.department || "",
-            position: employeeData?.position || "",
-            note: employeeData?.note || "",
-            idCard: employeeData?.idCard || "",
-            dob: employeeData?.dob || "",
             gender: employeeData?.gender || "",
+            dob: employeeData?.dob || "",
+            phone: employeeData?.phone || "",
+            idCard: employeeData?.idCard || "",
             address: employeeData?.address || "",
-            province: employeeData?.province || "",
-            district: employeeData?.district || "",
-            email: employeeData?.email || "",
-            method: employeeData?.method || "",
-            image: employeeData?.image || "",
+            position: employeeData?.position || "",
+            department: employeeData?.department || "",
+            startDate: employeeData?.startDate || "",
+            note: employeeData?.note || "",
+            imgUrl: employeeData?.imgUrl || "",
         },
         enableReinitialize: true,
+        validationSchema,
         onSubmit: (values) => {
-            EmployeeService.addEmployee(values).then((res) => {
-                toast.success("thêm nhân viên thành công")
-                console.log("Dữ liệu nhân viên:", { ...values, image: imagePreview });
-                alert("Dữ liệu đã được in ra console. Vui lòng kiểm tra!");
-            })
+            const formData = new FormData();
+            formData.append('employee', JSON.stringify(values));
+            if (imageFile) {
+                formData.append('image', imageFile);
+            }
+
+            EmployeeService.addEmployeeWithImage(formData)
+                .then(() => {
+                    toast.success(isEditMode ? "Cập nhật nhân viên thành công" : "Thêm nhân viên thành công");
+                    handleClose();
+                    if (!isEditMode && onAddSuccess) {
+                        onAddSuccess();
+                    }
+                })
+                .catch((err) => {
+                    if (err.response && err.response.status === 403) {
+                        toast.error("Bạn không có quyền thực hiện hành động này!");
+                    } else if (err.response && err.response.data && err.response.data.errors) {
+                        // Xử lý lỗi validation từ server
+                        const errors = err.response.data.errors;
+                        Object.keys(errors).forEach((key) => {
+                            const errorMessage = errors[key];
+                            const displayMessage = errorMessages[errorMessage] || errorMessage;
+                            // Hiển thị thông điệp lỗi từ server
+                            toast.error(displayMessage);
+                        });
+                    } else {
+                        // Hiển thị thông điệp lỗi chung nếu không có chi tiết lỗi
+                        const serverMessage = err.response?.data?.message;
+                        const displayMessage = errorMessages[serverMessage] || serverMessage || "Có lỗi xảy ra, vui lòng thử lại!";
+                        toast.error(displayMessage);
+                    }
+                    console.error("Error adding employee:", err);
+                });
         },
     });
 
-    // Cập nhật danh sách quận/huyện khi tỉnh thay đổi
     useEffect(() => {
-        if (formik.values.province) {
-            setDistricts(mockDistricts[formik.values.province] || []);
-            if (!mockDistricts[formik.values.province]) {
-                formik.setFieldValue('district', '');
-            }
-        } else {
-            setDistricts([]);
-            formik.setFieldValue('district', '');
-        }
-    }, [formik.values.province]);
-
-    // Cập nhật imagePreview khi employeeData thay đổi
-    useEffect(() => {
-        if (isEditMode && employeeData?.image) {
-            setImagePreview(employeeData.image);
+        if (isEditMode && employeeData?.imgUrl) {
+            setImagePreview(employeeData.imgUrl);
         } else {
             setImagePreview(null);
         }
@@ -115,15 +153,17 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
     const handleImageUpload = (event) => {
         const file = event.target.files[0];
         if (file) {
+            setImageFile(file);
             const imageUrl = URL.createObjectURL(file);
             setImagePreview(imageUrl);
-            formik.setFieldValue('image', imageUrl);
+            formik.setFieldValue('imgUrl', imageUrl);
         }
     };
 
     const handleClose = () => {
         formik.resetForm();
         setImagePreview(null);
+        setImageFile(null);
         onClose();
     };
 
@@ -248,6 +288,9 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                                                 name="fullName"
                                                 value={formik.values.fullName}
                                                 onChange={formik.handleChange}
+                                                onBlur={formik.handleBlur}
+                                                error={formik.touched.fullName && Boolean(formik.errors.fullName)}
+                                                helperText={formik.touched.fullName && formik.errors.fullName}
                                                 sx={{
                                                     width: '100%',
                                                     '& .MuiOutlinedInput-root': {
@@ -277,6 +320,9 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                                                 name="phone"
                                                 value={formik.values.phone}
                                                 onChange={formik.handleChange}
+                                                onBlur={formik.handleBlur}
+                                                error={formik.touched.phone && Boolean(formik.errors.phone)}
+                                                helperText={formik.touched.phone && formik.errors.phone}
                                                 sx={{
                                                     width: '100%',
                                                     '& .MuiOutlinedInput-root': {
@@ -315,6 +361,9 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                                                 name="startDate"
                                                 value={formik.values.startDate}
                                                 onChange={formik.handleChange}
+                                                onBlur={formik.handleBlur}
+                                                error={formik.touched.startDate && Boolean(formik.errors.startDate)}
+                                                helperText={formik.touched.startDate && formik.errors.startDate}
                                                 sx={{
                                                     width: '100%',
                                                     '& .MuiOutlinedInput-root': {
@@ -345,6 +394,8 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                                                         name="department"
                                                         value={formik.values.department}
                                                         onChange={formik.handleChange}
+                                                        onBlur={formik.handleBlur}
+                                                        error={formik.touched.department && Boolean(formik.errors.department)}
                                                         sx={{
                                                             borderRadius: '8px',
                                                             backgroundColor: '#f5f5f5',
@@ -358,6 +409,11 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                                                         <MenuItem value="Phòng IT">Phòng IT</MenuItem>
                                                         <MenuItem value="Phòng HR">Phòng HR</MenuItem>
                                                     </Select>
+                                                    {formik.touched.department && formik.errors.department && (
+                                                        <Typography color="error" sx={{ fontSize: 12, mt: 1 }}>
+                                                            {formik.errors.department}
+                                                        </Typography>
+                                                    )}
                                                 </FormControl>
                                                 <Button
                                                     variant="outlined"
@@ -392,6 +448,8 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                                                         name="position"
                                                         value={formik.values.position}
                                                         onChange={formik.handleChange}
+                                                        onBlur={formik.handleBlur}
+                                                        error={formik.touched.position && Boolean(formik.errors.position)}
                                                         sx={{
                                                             borderRadius: '8px',
                                                             backgroundColor: '#f5f5f5',
@@ -405,6 +463,11 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                                                         <MenuItem value="Trưởng phòng">Trưởng phòng</MenuItem>
                                                         <MenuItem value="Nhân viên">Nhân viên</MenuItem>
                                                     </Select>
+                                                    {formik.touched.position && formik.errors.position && (
+                                                        <Typography color="error" sx={{ fontSize: 12, mt: 1 }}>
+                                                            {formik.errors.position}
+                                                        </Typography>
+                                                    )}
                                                 </FormControl>
                                                 <Button
                                                     variant="outlined"
@@ -438,10 +501,9 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                                                         variant="outlined"
                                                         name="userId"
                                                         value={formik.values.userId}
-                                                        onChange={(e) => {
-                                                            console.log("Đã chọn tài khoản:", e.target.value);
-                                                            formik.handleChange(e);
-                                                        }}
+                                                        onChange={formik.handleChange}
+                                                        onBlur={formik.handleBlur}
+                                                        error={formik.touched.userId && Boolean(formik.errors.userId)}
                                                         disabled={isEditMode}
                                                         sx={{
                                                             borderRadius: '8px',
@@ -458,6 +520,11 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                                                             </MenuItem>
                                                         ))}
                                                     </Select>
+                                                    {formik.touched.userId && formik.errors.userId && (
+                                                        <Typography color="error" sx={{ fontSize: 12, mt: 1 }}>
+                                                            {formik.errors.userId}
+                                                        </Typography>
+                                                    )}
                                                 </FormControl>
                                                 <Button
                                                     variant="outlined"
@@ -497,13 +564,9 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                                                 name="note"
                                                 value={formik.values.note}
                                                 onChange={formik.handleChange}
-                                                InputProps={{
-                                                    startAdornment: (
-                                                        <InputAdornment position="start">
-                                                            <EditIcon fontSize="small" sx={{ color: '#999' }} />
-                                                        </InputAdornment>
-                                                    ),
-                                                }}
+                                                onBlur={formik.handleBlur}
+                                                error={formik.touched.note && Boolean(formik.errors.note)}
+                                                helperText={formik.touched.note && formik.errors.note}
                                                 sx={{
                                                     width: '100%',
                                                     '& .MuiOutlinedInput-root': {
@@ -541,6 +604,9 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                                                 name="idCard"
                                                 value={formik.values.idCard}
                                                 onChange={formik.handleChange}
+                                                onBlur={formik.handleBlur}
+                                                error={formik.touched.idCard && Boolean(formik.errors.idCard)}
+                                                helperText={formik.touched.idCard && formik.errors.idCard}
                                                 sx={{
                                                     width: '100%',
                                                     '& .MuiOutlinedInput-root': {
@@ -571,6 +637,9 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                                                 name="dob"
                                                 value={formik.values.dob}
                                                 onChange={formik.handleChange}
+                                                onBlur={formik.handleBlur}
+                                                error={formik.touched.dob && Boolean(formik.errors.dob)}
+                                                helperText={formik.touched.dob && formik.errors.dob}
                                                 sx={{
                                                     width: '100%',
                                                     '& .MuiOutlinedInput-root': {
@@ -607,11 +676,17 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                                                 name="gender"
                                                 value={formik.values.gender}
                                                 onChange={formik.handleChange}
-                                                sx={{ columnGap: 4 ,ml:9 }}
+                                                onBlur={formik.handleBlur}
+                                                sx={{ columnGap: 4, ml: 9 }}
                                             >
                                                 <FormControlLabel value="MALE" control={<Radio size="small" />} label="Nam" />
                                                 <FormControlLabel value="FEMALE" control={<Radio size="small" />} label="Nữ" />
                                             </RadioGroup>
+                                            {formik.touched.gender && formik.errors.gender && (
+                                                <Typography color="error" sx={{ fontSize: 12, mt: 1, ml: 9 }}>
+                                                    {formik.errors.gender}
+                                                </Typography>
+                                            )}
                                         </FormControl>
                                     </Grid>
                                 </Grid>
@@ -638,6 +713,9 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                                                 name="address"
                                                 value={formik.values.address}
                                                 onChange={formik.handleChange}
+                                                onBlur={formik.handleBlur}
+                                                error={formik.touched.address && Boolean(formik.errors.address)}
+                                                helperText={formik.touched.address && formik.errors.address}
                                                 sx={{
                                                     width: '100%',
                                                     '& .MuiOutlinedInput-root': {
@@ -649,128 +727,6 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData }) {
                                                     }
                                                 }}
                                             />
-                                        </Grid>
-                                    </Grid>
-                                </Grid>
-                                <Grid size={6}>
-                                    <Grid container spacing={1} alignItems="center">
-                                        <Grid size={4}>
-                                            <Typography variant="body2" sx={{ mb: 0.5, color: '#555', whiteSpace: 'nowrap', fontSize: '14px', fontWeight: 'bold' }}>
-                                                Khu vực
-                                            </Typography>
-                                        </Grid>
-                                        <Grid size={8}>
-                                            <Box sx={{ display: 'flex', gap: 1 }}>
-                                                <FormControl fullWidth size="small">
-                                                    <Select
-                                                        displayEmpty
-                                                        variant="outlined"
-                                                        name="province"
-                                                        value={formik.values.province}
-                                                        onChange={formik.handleChange}
-                                                        sx={{
-                                                            borderRadius: '8px',
-                                                            backgroundColor: '#f5f5f5',
-                                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
-                                                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#1976d2' },
-                                                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#1976d2' }
-                                                        }}
-                                                    >
-                                                        <MenuItem value="" disabled>Chọn Tỉnh/TP</MenuItem>
-                                                        {provinces.map((province) => (
-                                                            <MenuItem key={province.id} value={province.id}>
-                                                                {province.full_name}
-                                                            </MenuItem>
-                                                        ))}
-                                                    </Select>
-                                                </FormControl>
-                                                <FormControl fullWidth size="small">
-                                                    <Select
-                                                        displayEmpty
-                                                        variant="outlined"
-                                                        name="district"
-                                                        value={formik.values.district}
-                                                        onChange={formik.handleChange}
-                                                        disabled={!formik.values.province}
-                                                        sx={{
-                                                            borderRadius: '8px',
-                                                            backgroundColor: '#f5f5f5',
-                                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
-                                                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#1976d2' },
-                                                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#1976d2' }
-                                                        }}
-                                                    >
-                                                        <MenuItem value="" disabled>Chọn Quận/Huyện</MenuItem>
-                                                        {districts.map((district) => (
-                                                            <MenuItem key={district.id} value={district.id}>
-                                                                {district.full_name}
-                                                            </MenuItem>
-                                                        ))}
-                                                    </Select>
-                                                </FormControl>
-                                            </Box>
-                                        </Grid>
-                                    </Grid>
-                                </Grid>
-                                <Grid size={6}>
-                                    <Grid container spacing={1} alignItems="center">
-                                        <Grid size={4}>
-                                            <Typography variant="body2" sx={{ mb: 0.5, color: '#555', whiteSpace: 'nowrap', fontSize: '14px', fontWeight: 'bold' }}>
-                                                Email
-                                            </Typography>
-                                        </Grid>
-                                        <Grid size={8}>
-                                            <TextField
-                                                placeholder=""
-                                                size="small"
-                                                variant="outlined"
-                                                name="email"
-                                                value={formik.values.email}
-                                                onChange={formik.handleChange}
-                                                sx={{
-                                                    width: '100%',
-                                                    '& .MuiOutlinedInput-root': {
-                                                        borderRadius: '8px',
-                                                        backgroundColor: '#f5f5f5',
-                                                        '& fieldset': { borderColor: '#e0e0e0' },
-                                                        '&:hover fieldset': { borderColor: '#1976d2' },
-                                                        '&.Mui-focused fieldset': { borderColor: '#1976d2' }
-                                                    }
-                                                }}
-                                            />
-                                        </Grid>
-                                    </Grid>
-                                </Grid>
-                                <Grid size={6}>
-                                    <Grid container spacing={1} alignItems="center">
-                                        <Grid size={4}>
-                                            <Typography variant="body2" sx={{ mb: 0.5, color: '#555', whiteSpace: 'nowrap', fontSize: '14px', fontWeight: 'bold' }}>
-                                                Phương thức
-                                            </Typography>
-                                        </Grid>
-                                        <Grid size={8}>
-                                            <Box sx={{ display: 'flex', gap: 1 }}>
-                                                <FormControl fullWidth size="small">
-                                                    <Select
-                                                        displayEmpty
-                                                        variant="outlined"
-                                                        name="method"
-                                                        value={formik.values.method}
-                                                        onChange={formik.handleChange}
-                                                        sx={{
-                                                            borderRadius: '8px',
-                                                            backgroundColor: '#f5f5f5',
-                                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
-                                                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#1976d2' },
-                                                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#1976d2' }
-                                                        }}
-                                                    >
-                                                        <MenuItem value="" disabled>Chọn Phương thức</MenuItem>
-                                                        <MenuItem value="Facebook">Facebook</MenuItem>
-                                                        <MenuItem value="Zalo">Zalo</MenuItem>
-                                                    </Select>
-                                                </FormControl>
-                                            </Box>
                                         </Grid>
                                     </Grid>
                                 </Grid>

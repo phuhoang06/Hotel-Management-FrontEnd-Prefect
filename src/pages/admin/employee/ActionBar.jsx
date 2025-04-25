@@ -30,7 +30,8 @@ function ActionBar({
             width: '100%',
             mt: 1.5
         }}>
-            <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} loading={loading} />
+            <SearchBar onSearch={setSearchTerm} loading={loading} />
+
             {selectedRows.length > 0 && (
                 <>
                     <PermissionGuard permissions="DELETE_EMPLOYEE">
@@ -46,7 +47,7 @@ function ActionBar({
                                 fontSize: '12px',
                                 '& .MuiButton-startIcon': { marginRight: '4px' }
                             }}
-                            onClick={(e) => handleActionMenuClick(e, 'actionMenu')} // Thêm type 'actionMenu'
+                            onClick={(e) => handleActionMenuClick(e, 'actionMenu')}
                             disabled={loading}
                         >
                             Thao tác
@@ -54,7 +55,7 @@ function ActionBar({
                     </PermissionGuard>
                     <Menu
                         anchorEl={actionAnchorEl}
-                        open={Boolean(actionAnchorEl) && menuType === 'actionMenu'} // Sử dụng menuType để kiểm tra
+                        open={Boolean(actionAnchorEl) && menuType === 'actionMenu'}
                         onClose={handleActionMenuClose}
                         disableAutoFocusItem={true}
                     >

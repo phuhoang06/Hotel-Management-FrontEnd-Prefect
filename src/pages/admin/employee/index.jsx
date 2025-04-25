@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Grid, Snackbar, Alert } from '@mui/material';
 import { toast } from 'react-toastify';
 import EmployeeService from "../../../service/admin/employee.service.js";
-import SearchBar from './SearchBar.jsx';
 import DataTable from './DataTable.jsx';
 import AddEmployee from './AddEmployee.jsx';
 import EditEmployee from './EditEmployee.jsx';
@@ -12,21 +11,12 @@ import ActionBar from './ActionBar.jsx';
 
 function Employee() {
     const [selectedColumns, setSelectedColumns] = useState([
-        'Mã nhân viên', 'Tên nhân viên', 'Số điện thoại',
+        'Tên nhân viên', 'Số điện thoại',
         'Số CMND/CCCD', 'Địa chỉ', 'Chức vụ', 'Ghi chú'
     ]);
     const [selectedRows, setSelectedRows] = useState([]);
     const [employees, setEmployees] = useState([]);
-    const [filteredEmployees, setFilteredEmployees] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
-
-    // Pagination
-    const [page, setPage] = useState(0);
-    const [size, setSize] = useState(10);
-    const [totalPages, setTotalPages] = useState(0);
-    const [totalElements, setTotalElements] = useState(0);
-
     const [openSnackbar, setOpenSnackbar] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
@@ -35,10 +25,12 @@ function Employee() {
     const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [actionAnchorEl, setActionAnchorEl] = useState(null);
-    const [menuType, setMenuType] = useState(null); // Thêm state để lưu loại menu
+    const [menuType, setMenuType] = useState(null);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [searchTerm, setSearchTerm] = useState("");
 
     const columnOptions = [
-        { label: 'Ảnh', key: 'image' },
+        { label: 'Ảnh', key: 'imgUrl' },
         { label: 'Mã nhân viên', key: 'user_id' },
         { label: 'Tên nhân viên', key: 'fullName' },
         { label: 'Mã chấm công', key: 'user_id' },
@@ -60,63 +52,44 @@ function Employee() {
         { label: 'Phòng ban', key: 'department' }
     ];
 
-    const fetchEmployees = async (pageNum = page, pageSize = size, searchKeyword = '') => {
-        setLoading(true);
-        try {
-            const cachedData = sessionStorage.getItem('employeeData');
-            const timestamp = sessionStorage.getItem('employeeDataTimestamp');
-            const now = new Date().getTime();
+    useEffect(() => {
+        const loadEmployees = async () => {
+            setLoading(true);
+            try {
+                let response;
 
-            if (cachedData && timestamp && (now - parseInt(timestamp) < 5 * 60 * 1000)) {
-                try {
-                    const parsedData = JSON.parse(cachedData);
-                    setEmployees(parsedData.content || []);
-                    setFilteredEmployees(parsedData.content || []);
-                    setTotalPages(parsedData.totalPages || 1);
-                    setTotalElements(parsedData.totalElements || 0);
-                    setLoading(false);
-                    console.log('Using cached employee data');
-                    return;
-                } catch (error) {
-                    console.error('Error parsing cached data:', error);
+                if (searchTerm) {
+                    // Nếu có từ khóa tìm kiếm, sử dụng API tìm kiếm theo position
+                    response = await EmployeeService.searchByPosition(searchTerm);
+                } else {
+                    // Nếu không có từ khóa, lấy tất cả
+                    response = await EmployeeService.getAllEmployee();
                 }
+
+                if (response && response.data) {
+                    setEmployees(response.data.content || []);
+                    console.log('Dữ liệu nhân viên đã được tải:', response.data);
+                }
+            } catch (error) {
+                console.error('Lỗi khi lấy danh sách nhân viên:', error);
+                toast.error('Không thể tải danh sách nhân viên');
+                setEmployees([]);
+            } finally {
+                setLoading(false);
             }
+        };
 
-            const response = await EmployeeService.getAllEmployee(pageNum, pageSize);
-            if (response.data) {
-                const { content, totalPages, totalElements } = response.data;
-                setEmployees(content || []);
-                setFilteredEmployees(content || []);
-                setTotalPages(totalPages || 1);
-                setTotalElements(totalElements || 0);
+        loadEmployees();
+    }, [searchTerm, refreshTrigger]);
 
-                sessionStorage.setItem('employeeData', JSON.stringify(response.data));
-                sessionStorage.setItem('employeeDataTimestamp', new Date().getTime().toString());
-            }
-        } catch (error) {
-            console.error('Error fetching employees:', error);
-            setSnackbarMessage('Không thể tải danh sách nhân viên');
-            setSnackbarSeverity('error');
-            setOpenSnackbar(true);
-
-            setEmployees([]);
-            setFilteredEmployees([]);
-        } finally {
-            setLoading(false);
-        }
+    const refreshEmployeeData = () => {
+        setRefreshTrigger(prev => prev + 1);
     };
 
-    useEffect(() => {
-        fetchEmployees(page, size, searchTerm);
-    }, [page, size]);
-
-    useEffect(() => {
-        const delayDebounceFn = setTimeout(() => {
-            fetchEmployees(0, size, searchTerm);
-        }, 500);
-
-        return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm]);
+    const handleSetSearchTerm = (term) => {
+        console.log("Tìm kiếm với từ khóa:", term);
+        setSearchTerm(term);
+    };
 
     const handleColumnToggle = (label) => {
         setSelectedColumns(prev =>
@@ -137,7 +110,7 @@ function Employee() {
 
     const handleSelectAllRows = (event) => {
         if (event.target.checked) {
-            setSelectedRows(filteredEmployees.map(emp => emp.id));
+            setSelectedRows(employees.map(emp => emp.id));
         } else {
             setSelectedRows([]);
         }
@@ -168,9 +141,9 @@ function Employee() {
             setSelectedRows([]);
             setOpenDeleteDialog(false);
             setActionAnchorEl(null);
-            fetchEmployees();
+            refreshEmployeeData();
         } catch (error) {
-            console.error('Error deleting employees:', error);
+            console.error('Lỗi khi xóa nhân viên:', error);
             setSnackbarMessage('Xóa nhân viên thất bại');
             setSnackbarSeverity('error');
             setOpenSnackbar(true);
@@ -181,7 +154,7 @@ function Employee() {
 
     const handleEmployeeAdded = () => {
         setOpenAddDialog(false);
-        fetchEmployees();
+        refreshEmployeeData();
         setSnackbarMessage('Thêm nhân viên thành công!');
         setSnackbarSeverity('success');
         setOpenSnackbar(true);
@@ -189,7 +162,7 @@ function Employee() {
 
     const handleEmployeeUpdated = () => {
         setOpenEditDialog(false);
-        fetchEmployees();
+        refreshEmployeeData();
         setSnackbarMessage('Cập nhật nhân viên thành công!');
         setSnackbarSeverity('success');
         setOpenSnackbar(true);
@@ -199,29 +172,31 @@ function Employee() {
 
     const handleActionMenuClick = (e, type) => {
         setActionAnchorEl(e.currentTarget);
-        setMenuType(type); // Lưu loại menu ('columnMenu' hoặc 'actionMenu')
+        setMenuType(type);
     };
 
     const handleActionMenuClose = () => {
         setActionAnchorEl(null);
-        setMenuType(null); // Reset loại menu khi đóng
+        setMenuType(null);
     };
 
     return (
         <Grid container spacing={0.5}>
             <Grid size={{ xs: 4, md: 2.4 }}>
-                <FilterSidebar size={size} setSize={setSize} />
+                <FilterSidebar
+                    refreshData={refreshEmployeeData}
+                />
             </Grid>
             <Grid size={{ xs: 6, md: 9.5 }}>
                 <ActionBar
                     searchTerm={searchTerm}
-                    setSearchTerm={setSearchTerm}
+                    setSearchTerm={handleSetSearchTerm}
                     loading={loading}
                     selectedRows={selectedRows}
                     handleActionMenuClick={handleActionMenuClick}
                     handleActionMenuClose={handleActionMenuClose}
                     actionAnchorEl={actionAnchorEl}
-                    menuType={menuType} // Truyền menuType xuống ActionBar
+                    menuType={menuType}
                     handleDeleteSelected={handleDeleteSelected}
                     handleOpenAddDialog={handleOpenAddDialog}
                     columnOptions={columnOptions}
@@ -229,7 +204,7 @@ function Employee() {
                     handleColumnToggle={handleColumnToggle}
                 />
                 <DataTable
-                    employees={filteredEmployees}
+                    employees={employees}
                     selectedColumns={selectedColumns}
                     selectedRows={selectedRows}
                     handleRowSelect={handleRowSelect}
@@ -241,15 +216,12 @@ function Employee() {
                 <AddEmployee
                     open={openAddDialog}
                     onClose={() => setOpenAddDialog(false)}
-                    fetchAllEmployees={() => fetchEmployees(page, size)}
-                    employee={selectedEmployee}
                     onAddSuccess={handleEmployeeAdded}
                 />
                 <EditEmployee
                     open={openEditDialog}
                     onClose={() => setOpenEditDialog(false)}
                     employeeData={selectedEmployee}
-                    fetchAllEmployees={() => fetchEmployees(page, size)}
                     onEditSuccess={handleEmployeeUpdated}
                 />
                 <DeleteEmployee

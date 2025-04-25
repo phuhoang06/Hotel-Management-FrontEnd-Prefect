@@ -6,6 +6,10 @@ class UserService {
             locked: locked
         });
     }
+
+    static async getByIdLock(id){
+        return await axiosInstance.get(`users/${id}`);
+    }
 }
 
 export default UserService;
