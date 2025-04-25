@@ -52,7 +52,7 @@ export default function RoomOccupancyCard() {
     ];
 
     return (
-        <Card sx={{ width: '100%', height: '100%', boxSizing: 'border-box', p: 3 ,maxWidth: 1110, borderRadius: 3, boxShadow: 3 }}>
+        <Card sx={{  boxSizing: 'border-box', p: 3 , borderRadius: 3, boxShadow: 3 }}>
             {/* Header */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold' }}>

@@ -8,6 +8,7 @@ import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import ClearIcon from '@mui/icons-material/Clear';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { styled } from '@mui/material/styles';
+import { RegistrationDialog } from './EmployeeRegistrationForm';
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import EmployeeService from "../../../service/admin/employee.service.js";
@@ -36,6 +37,10 @@ const formatDateFromArray = (dateArray) => {
 };
 
 function EditEmployeeDialog({ open, onClose, employeeData, onEditSuccess }) {
+
+    const [openRegistrationDialog, setOpenRegistrationDialog] = useState(false);
+    // const [provinces] = useState(mockProvinces);
+    // const [districts, setDistricts] = useState([]);
     const [imagePreview, setImagePreview] = useState(null);
     const [accounts, setAccounts] = useState([]);
     const [imageFile, setImageFile] = useState(null);
@@ -182,6 +187,7 @@ function EditEmployeeDialog({ open, onClose, employeeData, onEditSuccess }) {
     };
 
     return (
+        <>
         <Dialog
             open={open}
             onClose={onClose}
@@ -514,6 +520,19 @@ function EditEmployeeDialog({ open, onClose, employeeData, onEditSuccess }) {
                                                         </Typography>
                                                     )}
                                                 </FormControl>
+                                                <Button
+                                                    variant="outlined"
+                                                    size="small"
+                                                    sx={{
+                                                        borderRadius: '8px',
+                                                        borderColor: '#e0e0e0',
+                                                        minWidth: '40px',
+                                                        padding: '0 8px'
+                                                    }}
+                                                    onClick={() => setOpenRegistrationDialog(true)}
+                                                >
+                                                    +
+                                                </Button>
                                             </Box>
                                             {accounts.length === 0 && (
                                                 <Typography color="error" sx={{ fontSize: 12, mt: 1 }}>
@@ -731,6 +750,12 @@ function EditEmployeeDialog({ open, onClose, employeeData, onEditSuccess }) {
                 </Button>
             </DialogActions>
         </Dialog>
+            <RegistrationDialog
+                open={openRegistrationDialog}
+                onClose={() => setOpenRegistrationDialog(false)}
+            />
+        </>
+
     );
 }
 

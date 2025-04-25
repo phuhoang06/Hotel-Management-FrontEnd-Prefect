@@ -11,7 +11,8 @@ import { styled } from '@mui/material/styles';
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import EmployeeService from "../../../service/admin/employee.service.js";
-import { toast } from "react-toastify";
+import {toast} from "react-toastify";
+import { RegistrationDialog } from './EmployeeRegistrationForm';
 
 const VisuallyHiddenInput = styled('input')({
     clip: 'rect(0 0 0 0)',
@@ -27,6 +28,9 @@ const VisuallyHiddenInput = styled('input')({
 
 function AddEmployeeDialog({ open, onClose, isEditMode, employeeData, onAddSuccess }) {
     const [imagePreview, setImagePreview] = useState(null);
+    const [openRegistrationDialog, setOpenRegistrationDialog] = useState(false);
+
+    // Dữ liệu tài khoản
     const [accounts, setAccounts] = useState([]);
     const [imageFile, setImageFile] = useState(null);
 
@@ -411,6 +415,19 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData, onAddSucce
                                                         </Typography>
                                                     )}
                                                 </FormControl>
+                                                <Button
+                                                    variant="outlined"
+                                                    size="small"
+                                                    sx={{
+                                                        borderRadius: '8px',
+                                                        borderColor: '#e0e0e0',
+                                                        minWidth: '40px',
+                                                        padding: '0 8px'
+                                                    }}
+                                                    onClick={() => setOpenRegistrationDialog(true)}
+                                                >
+                                                    +
+                                                </Button>
                                             </Box>
                                         </Grid>
                                     </Grid>
@@ -452,6 +469,19 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData, onAddSucce
                                                         </Typography>
                                                     )}
                                                 </FormControl>
+                                                <Button
+                                                    variant="outlined"
+                                                    size="small"
+                                                    sx={{
+                                                        borderRadius: '8px',
+                                                        borderColor: '#e0e0e0',
+                                                        minWidth: '40px',
+                                                        padding: '0 8px'
+                                                    }}
+                                                    onClick={() => setOpenRegistrationDialog(true)}
+                                                >
+                                                    +
+                                                </Button>
                                             </Box>
                                         </Grid>
                                     </Grid>
@@ -496,6 +526,19 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData, onAddSucce
                                                         </Typography>
                                                     )}
                                                 </FormControl>
+                                                <Button
+                                                    variant="outlined"
+                                                    size="small"
+                                                    sx={{
+                                                        borderRadius: '8px',
+                                                        borderColor: '#e0e0e0',
+                                                        minWidth: '40px',
+                                                        padding: '0 8px'
+                                                    }}
+                                                    onClick={() => setOpenRegistrationDialog(true)}
+                                                >
+                                                    +
+                                                </Button>
                                             </Box>
                                             {accounts.length === 0 && (
                                                 <Typography color="error" sx={{ fontSize: 12, mt: 1 }}>
@@ -712,6 +755,7 @@ function AddEmployeeDialog({ open, onClose, isEditMode, employeeData, onAddSucce
                     Bỏ qua
                 </Button>
             </DialogActions>
+            <RegistrationDialog open={openRegistrationDialog} onClose={() => setOpenRegistrationDialog(false)} />
         </Dialog>
     );
 }
