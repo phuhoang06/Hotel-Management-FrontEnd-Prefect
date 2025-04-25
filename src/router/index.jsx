@@ -9,6 +9,7 @@ import Employee from "../pages/admin/employee/index.jsx";
 import RoomBookingView from "../pages/employee/roomBooking/RoomBookingView.jsx";
 import LoginPage from "../pages/auth/login/index.jsx";
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
+import CategoryRoom from "../pages/admin/room/CategoryRoom.jsx";
 
 const OverviewContent = () => (
     <section style={{ padding: "20px" }}>
@@ -18,7 +19,7 @@ const OverviewContent = () => (
 
 const RoomsContent = () => (
     <section style={{ padding: "20px" }}>
-        <Room/>
+        <CategoryRoom/>
     </section>
 );
 
