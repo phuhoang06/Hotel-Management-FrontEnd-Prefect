@@ -4,7 +4,6 @@ import { Typography } from "@mui/material";
 import { LayoutAdmin } from "../layouts/admin/home/index.jsx";
 import { LayoutEmployee } from "../layouts/employee/home/index.jsx";
 import Overview from "../pages/admin/overview/index.jsx";
-import Room from "../pages/admin/room/index.jsx";
 import Employee from "../pages/admin/employee/index.jsx";
 import RoomBookingView from "../pages/employee/roomBooking/RoomBookingView.jsx";
 import LoginPage from "../pages/auth/login/index.jsx";
