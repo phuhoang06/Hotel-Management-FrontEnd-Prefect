@@ -6,7 +6,7 @@ class RoomViewService {
     /**
      * Lấy tất cả phòng
      */
-    static async getAllRoomView(page = 0, size = 5) {
+    static async getAllRoomView(page = 0, size = 3) {
         return await axiosInstance.get(`/rooms?page=${page}&size=${size}`);
     }
 
