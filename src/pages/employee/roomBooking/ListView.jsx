@@ -12,6 +12,7 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
     const [searchValue, setSearchValue] = useState('');
     const [rooms, setRooms] = useState([]);
     const [allRooms, setAllRooms] = useState([]);
+    const [activeFilter, setActiveFilter] = useState('ALL');
 
     useEffect(() => {
         const fetchRooms = async () => {
@@ -117,9 +118,14 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
 
     const handleStatusFilter = async (status) => {
         try {
-            const response = await RoomViewService.searchRoomView({ status });
-            const roomData = response.data.content || [];
-            setRooms(roomData);
+            setActiveFilter(status);
+            if (status === 'ALL') {
+                setRooms(allRooms);
+            } else {
+                const response = await RoomViewService.searchRoomView({ status });
+                const roomData = response.data.content || [];
+                setRooms(roomData);
+            }
         } catch (error) {
             console.error('Error filtering rooms:', error);
         }
@@ -170,8 +176,10 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
                     <>
                         <StatusBar
                             statusCounts={statusCounts}
-                            variant="list-grid"
+                            variant="list"
                             onStatusFilter={handleStatusFilter}
+                            totalRooms={allRooms.length}
+                            activeFilter={activeFilter}
                         />
                         <TableContainer>
                             <Table sx={{ minWidth: 650 }} aria-label="booking table">
