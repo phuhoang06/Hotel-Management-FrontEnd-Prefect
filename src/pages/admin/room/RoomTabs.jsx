@@ -20,7 +20,6 @@ import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-import CardMedia from '@mui/material/CardMedia';
 import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
 import { toast } from 'react-toastify';
@@ -43,13 +42,13 @@ function CustomTabPanel(props) {
             aria-labelledby={`simple-tab-${index}`}
             style={{
                 opacity: value === index ? 1 : 0,
-                transition: 'opacity 0.24s ease-in-out', // 0.3s * 0.8
-                minHeight: '320px', // 400px * 0.8
+                transition: 'opacity 0.24s ease-in-out',
+                minHeight: '320px',
                 display: value === index ? 'block' : 'none',
             }}
             {...other}
         >
-            <Box sx={{ p: 1.6 }}>{children}</Box> {/* 2 * 0.8 */}
+            <Box sx={{ p: 1.6 }}>{children}</Box>
         </div>
     );
 }
@@ -80,6 +79,9 @@ export default function RoomTabs() {
     const [totalCategories, setTotalCategories] = React.useState(0);
     const [pageRooms, setPageRooms] = React.useState(0);
     const [totalRooms, setTotalRooms] = React.useState(0);
+
+    // Định nghĩa placeholder image
+    const placeholderImage = '';
 
     const filteredCategories = React.useCallback(async (currentPage = 0) => {
         try {
@@ -226,6 +228,7 @@ export default function RoomTabs() {
                 toast.error(`Không thể tải thông tin chi tiết hạng phòng: ${err.message}`);
             } finally {
                 setLoading(false);
+                console.log(expandedRowDetails);
             }
         }
     };
@@ -246,6 +249,7 @@ export default function RoomTabs() {
                 toast.error(`Không thể tải thông tin chi tiết phòng: ${err.message}`);
             } finally {
                 setLoading(false);
+                console.log(expandedRoomRow);
             }
         }
     };
@@ -340,38 +344,38 @@ export default function RoomTabs() {
     };
 
     const categoriesColumns = [
-        { id: 'checkbox', label: '', width: '32px' }, // 40px * 0.8
-        { id: 'code', label: 'Mã hạng phòng', width: '96px' }, // 120px * 0.8
-        { id: 'name', label: 'Tên hạng phòng', width: '144px' }, // 180px * 0.8
-        { id: 'rooms', label: 'Số lượng phòng', width: '96px' }, // 120px * 0.8
-        { id: 'hourlyPrice', label: 'Giá giờ', width: '80px' }, // 100px * 0.8
-        { id: 'dailyPrice', label: 'Giá ngày', width: '80px' }, // 100px * 0.8
-        { id: 'overnightPrice', label: 'Giá qua đêm', width: '96px' }, // 120px * 0.8
-        { id: 'status', label: 'Trạng thái', width: '112px' }, // 140px * 0.8
-        { id: 'actions', label: 'Chỉnh sửa', width: '96px' }, // 120px * 0.8
+        { id: 'checkbox', label: '', width: '32px' },
+        { id: 'code', label: 'Mã hạng phòng', width: '96px' },
+        { id: 'name', label: 'Tên hạng phòng', width: '144px' },
+        { id: 'rooms', label: 'Số lượng phòng', width: '96px' },
+        { id: 'hourlyPrice', label: 'Giá giờ', width: '80px' },
+        { id: 'dailyPrice', label: 'Giá ngày', width: '80px' },
+        { id: 'overnightPrice', label: 'Giá qua đêm', width: '96px' },
+        { id: 'status', label: 'Trạng thái', width: '112px' },
+        { id: 'actions', label: 'Chỉnh sửa', width: '96px' },
     ];
 
     const roomsColumns = [
-        { id: 'id', label: 'Mã phòng', width: '80px' }, // 100px * 0.8
-        { id: 'category', label: 'Hạng phòng', width: '144px' }, // 180px * 0.8
-        { id: 'floor', label: 'Tầng', width: '64px' }, // 80px * 0.8
-        { id: 'status', label: 'Tình trạng', width: '120px' }, // 150px * 0.8
-        { id: 'clean', label: 'Trạng thái dọn dẹp', width: '144px' }, // 180px * 0.8
+        { id: 'id', label: 'Mã phòng', width: '80px' },
+        { id: 'category', label: 'Hạng phòng', width: '144px' },
+        { id: 'floor', label: 'Tầng', width: '64px' },
+        { id: 'status', label: 'Tình trạng', width: '120px' },
+        { id: 'clean', label: 'Trạng thái dọn dẹp', width: '144px' },
     ];
 
     return (
-        <Box sx={{ width: '100%', minWidth: '960px', fontSize: '0.7rem' }}> {/* 1200px * 0.8, 0.875rem * 0.8 */}
+        <Box sx={{ width: '100%', minWidth: '960px', fontSize: '0.7rem' }}>
             {loading && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 9999 }}>
-                    <CircularProgress size="2rem" /> {/* Default size ~40px, adjusted to 32px */}
+                    <CircularProgress size="2rem" />
                 </Box>
             )}
 
-            <Paper elevation={2} sx={{ mb: 2.4, minWidth: '960px' }}> {/* 3 * 0.8, 1200px * 0.8 */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: 1, borderColor: 'divider', px: 1.6 }}> {/* 2 * 0.8 */}
+            <Paper elevation={2} sx={{ mb: 2.4, minWidth: '960px' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: 1, borderColor: 'divider', px: 1.6 }}>
                     <Tabs value={value} onChange={handleChange} aria-label="room tabs">
-                        <Tab label="Hạng phòng" {...a11yProps(0)} sx={{ py: 1.6 }} /> {/* 2 * 0.8 */}
-                        <Tab label="Danh sách phòng" {...a11yProps(1)} sx={{ py: 1.6 }} /> {/* 2 * 0.8 */}
+                        <Tab label="Hạng phòng" {...a11yProps(0)} sx={{ py: 1.6 }} />
+                        <Tab label="Danh sách phòng" {...a11yProps(1)} sx={{ py: 1.6 }} />
                     </Tabs>
                     <Button variant="contained" color="success" startIcon={<span>+</span>} sx={{ fontSize: '0.7rem' }}>
                         Thêm mới
@@ -379,7 +383,7 @@ export default function RoomTabs() {
                 </Box>
             </Paper>
 
-            <Grid container spacing={2.4} sx={{ minWidth: '960px' }}> {/* 3 * 0.8, 1200px * 0.8 */}
+            <Grid container spacing={2.4} sx={{ minWidth: '960px' }}>
                 <Grid item xs={4}>
                     <Paper elevation={1} sx={{ p: 1.6, height: '100%' }}>
                         {value === 0 ? (
@@ -410,7 +414,7 @@ export default function RoomTabs() {
                                         value={recordsPerPage}
                                         onChange={handleRowsPerPageChange}
                                         label="Số bản ghi"
-                                        variant="outlined" // Thêm variant="outlined"
+                                        variant="outlined"
                                         sx={{ fontSize: '0.7rem' }}
                                     >
                                         <MenuItem value={3} sx={{ fontSize: '0.7rem' }}>3</MenuItem>
@@ -436,7 +440,7 @@ export default function RoomTabs() {
                                         value={categoryRoom}
                                         onChange={(e) => setCategoryRoom(e.target.value)}
                                         label="Loại phòng"
-                                        variant="outlined" // Thêm variant="outlined"
+                                        variant="outlined"
                                         sx={{ fontSize: '0.7rem' }}
                                     >
                                         <MenuItem value="" sx={{ fontSize: '0.7rem' }}>Tất cả</MenuItem>
@@ -453,7 +457,7 @@ export default function RoomTabs() {
                                         value={statusRoom}
                                         onChange={(e) => setStatusRoom(e.target.value)}
                                         label="Tình trạng"
-                                        variant="outlined" // Thêm variant="outlined"
+                                        variant="outlined"
                                         sx={{ fontSize: '0.7rem' }}
                                     >
                                         <MenuItem value="" sx={{ fontSize: '0.7rem' }}>Tất cả</MenuItem>
@@ -471,7 +475,7 @@ export default function RoomTabs() {
                                         value={recordsPerPage}
                                         onChange={handleRowsPerPageChange}
                                         label="Số bản ghi"
-                                        variant="outlined" // Thêm variant="outlined"
+                                        variant="outlined"
                                         sx={{ fontSize: '0.7rem' }}
                                     >
                                         <MenuItem value={3} sx={{ fontSize: '0.7rem' }}>3</MenuItem>
@@ -488,24 +492,24 @@ export default function RoomTabs() {
                 <Grid item xs={8}>
                     <Paper elevation={2} sx={{ height: '100%' }}>
                         <CustomTabPanel value={value} index={0}>
-                            <Typography variant="h6" sx={{ mb: 1.6, px: 0.8, fontSize: '0.8rem' }}> {/* 2 * 0.8, 1 * 0.8, 1rem * 0.8 */}
+                            <Typography variant="h6" sx={{ mb: 1.6, px: 0.8, fontSize: '0.8rem' }}>
                                 Hạng phòng & Phòng
                             </Typography>
-                            <TableContainer sx={{ maxHeight: '320px' }}> {/* 400px * 0.8 */}
-                                <Table size="small" stickyHeader sx={{ fontSize: '0.6rem' }}> {/* 0.75rem * 0.8 */}
+                            <TableContainer sx={{ maxHeight: '320px' }}>
+                                <Table size="small" stickyHeader sx={{ fontSize: '0.6rem' }}>
                                     <TableHead>
                                         <TableRow>
                                             {categoriesColumns.map((column) => (
                                                 <TableCell
                                                     key={column.id}
                                                     sx={{
-                                                        px: 0.4, // 0.5 * 0.8
-                                                        py: 0.4, // 0.5 * 0.8
+                                                        px: 0.4,
+                                                        py: 0.4,
                                                         width: column.width,
                                                         whiteSpace: 'nowrap',
                                                         fontWeight: 'bold',
                                                         backgroundColor: '#f5f5f5',
-                                                        fontSize: '0.6rem', // 0.75rem * 0.8
+                                                        fontSize: '0.6rem',
                                                     }}
                                                 >
                                                     {column.id === 'checkbox' ? (
@@ -539,7 +543,7 @@ export default function RoomTabs() {
                                                             },
                                                         }}
                                                     >
-                                                        <TableCell sx={{ px: 0.4, py: 0.4 }}> {/* 0.5 * 0.8 */}
+                                                        <TableCell sx={{ px: 0.4, py: 0.4 }}>
                                                             <Checkbox
                                                                 checked={selectedCategories.includes(category.id)}
                                                                 onChange={(e) => {
@@ -549,34 +553,34 @@ export default function RoomTabs() {
                                                                 size="small"
                                                             />
                                                         </TableCell>
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{category.code}</TableCell> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{category.name}</TableCell> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{category.rooms?.length || 0}</TableCell> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{category.hourlyPrice?.toLocaleString() || 'N/A'} đ</TableCell> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{category.dailyPrice?.toLocaleString() || 'N/A'} đ</TableCell> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{category.overnightPrice?.toLocaleString() || 'N/A'} đ</TableCell> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
+                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{category.code}</TableCell>
+                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{category.name}</TableCell>
+                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{category.rooms?.length || 0}</TableCell>
+                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{category.hourlyPrice?.toLocaleString() || 'N/A'} đ</TableCell>
+                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{category.dailyPrice?.toLocaleString() || 'N/A'} đ</TableCell>
+                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{category.overnightPrice?.toLocaleString() || 'N/A'} đ</TableCell>
+                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>
                                                             <Box
                                                                 sx={{
                                                                     display: 'inline-block',
-                                                                    px: 0.4, // 0.5 * 0.8
-                                                                    py: 0.2, // 0.25 * 0.8
-                                                                    borderRadius: 0.8, // 1 * 0.8
+                                                                    px: 0.4,
+                                                                    py: 0.2,
+                                                                    borderRadius: 0.8,
                                                                     bgcolor: category.status === 'ACTIVE' ? 'success.light' : 'error.light',
                                                                     color: 'white',
-                                                                    fontSize: '0.6rem', // 0.75rem * 0.8
+                                                                    fontSize: '0.6rem',
                                                                 }}
                                                             >
                                                                 {category.status === 'ACTIVE' ? 'Đang kinh doanh' : 'Ngừng kinh doanh'}
                                                             </Box>
                                                         </TableCell>
-                                                        <TableCell sx={{ px: 0.4, py: 0.4 }}> {/* 0.5 * 0.8 */}
+                                                        <TableCell sx={{ px: 0.4, py: 0.4 }}>
                                                             <Button
                                                                 variant="text"
                                                                 color="primary"
                                                                 onClick={(e) => handleUpdate(category, e)}
                                                                 size="small"
-                                                                sx={{ fontSize: '0.6rem', minWidth: 'auto' }} // 0.75rem * 0.8
+                                                                sx={{ fontSize: '0.6rem', minWidth: 'auto' }}
                                                             >
                                                                 Chỉnh sửa
                                                             </Button>
@@ -586,76 +590,79 @@ export default function RoomTabs() {
                                                         <TableRow>
                                                             <TableCell colSpan={9} sx={{ p: 0 }}>
                                                                 <Box sx={{
-                                                                    p: 0.8, // 1 * 0.8
+                                                                    p: 0.8,
                                                                     bgcolor: 'rgba(0, 0, 0, 0.02)',
                                                                     borderTop: '1px dashed rgba(0, 0, 0, 0.1)',
                                                                     borderBottom: '1px dashed rgba(0, 0, 0, 0.1)',
-                                                                    fontSize: '0.6rem' // 0.75rem * 0.8
+                                                                    fontSize: '0.6rem'
                                                                 }}>
-                                                                    <Typography variant="subtitle1" sx={{ mb: 0.8, fontWeight: 'bold', fontSize: '0.7rem' }}> {/* 1 * 0.8, 0.875rem * 0.8 */}
+                                                                    <Typography variant="subtitle1" sx={{ mb: 0.8, fontWeight: 'bold', fontSize: '0.7rem' }}>
                                                                         Thông tin chi tiết
                                                                     </Typography>
-                                                                    <Grid container spacing={0.8}> {/* 1 * 0.8 */}
-                                                                        <Grid item xs={3}>
-                                                                            <CardMedia
-                                                                                component="img"
-                                                                                sx={{
-                                                                                    height: 64, // 80px * 0.8
-                                                                                    width: '100%',
-                                                                                    objectFit: 'cover',
-                                                                                    borderRadius: 0.8, // 1 * 0.8
-                                                                                    border: '1px solid rgba(0, 0, 0, 0.1)',
-                                                                                }}
-                                                                                image={expandedRowDetails.imgUrl || 'https://via.placeholder.com/150'}
-                                                                                alt={expandedRowDetails.name}
-                                                                            />
+                                                                    <Grid container spacing={0.8}>
+                                                                        <Grid item xs={4}>
+                                                                            <Box>
+                                                                                <Typography variant="body2" sx={{ fontSize: '0.6rem', fontWeight: 'bold' }}>
+                                                                                    Ảnh:
+                                                                                </Typography>
+                                                                                <img
+                                                                                    src={expandedRowDetails.imgUrl ? (expandedRowDetails.imgUrl.startsWith('http') ? expandedRowDetails.imgUrl : `http://localhost:8080/${expandedRowDetails.imgUrl}`) : placeholderImage}
+                                                                                    alt={expandedRowDetails.name}
+                                                                                    style={{
+                                                                                        width: '120px', // 150px * 0.8
+                                                                                        height: '120px', // 150px * 0.8
+                                                                                        objectFit: 'cover',
+                                                                                        marginTop: '6.4px' // 8px * 0.8
+                                                                                    }}
+                                                                                />
+                                                                            </Box>
                                                                         </Grid>
-                                                                        <Grid item xs={9}>
-                                                                            <Grid container spacing={0.8}> {/* 1 * 0.8 */}
+                                                                        <Grid item xs={8}>
+                                                                            <Grid container spacing={0.8}>
                                                                                 <Grid item xs={6}>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
                                                                                         <strong>Mã hạng phòng:</strong> {expandedRowDetails.code}
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
                                                                                         <strong>Tên hạng phòng:</strong> {expandedRowDetails.name}
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
                                                                                         <strong>Sức chứa tối đa:</strong> {expandedRowDetails.maxAdultCapacity} người lớn, {expandedRowDetails.maxChildCapacity} trẻ em
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
                                                                                         <strong>Sức chứa từ chuẩn:</strong> {expandedRowDetails.standardAdultCapacity} người lớn, {expandedRowDetails.standardChildCapacity} trẻ em
                                                                                     </Typography>
                                                                                 </Grid>
                                                                                 <Grid item xs={6}>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
                                                                                         <strong>Chi nhánh:</strong> Chi nhánh trung tâm
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
                                                                                         <strong>Số lượng phòng:</strong> {expandedRowDetails.rooms?.length || 0}
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
                                                                                         <strong>Giá giờ:</strong> {expandedRowDetails.hourlyPrice?.toLocaleString() || 'N/A'} đ
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
                                                                                         <strong>Giá ngày:</strong> {expandedRowDetails.dailyPrice?.toLocaleString() || 'N/A'} đ
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
                                                                                         <strong>Giá qua đêm:</strong> {expandedRowDetails.overnightPrice?.toLocaleString() || 'N/A'} đ
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
                                                                                         <strong>Phí thuê giường:</strong> {expandedRowDetails.defaultExtraFee?.toLocaleString() || 'N/A'} đ
                                                                                     </Typography>
                                                                                 </Grid>
                                                                             </Grid>
                                                                         </Grid>
                                                                     </Grid>
-                                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.8, gap: 0.4 }}> {/* 1 * 0.8, 0.5 * 0.8 */}
+                                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.8, gap: 0.4 }}>
                                                                         <Button
                                                                             variant="contained"
                                                                             color="success"
                                                                             onClick={(e) => handleUpdate(category, e)}
                                                                             size="small"
-                                                                            sx={{ minWidth: 64, fontSize: '0.6rem' }} // 80 * 0.8, 0.75rem * 0.8
+                                                                            sx={{ minWidth: 64, fontSize: '0.6rem' }}
                                                                         >
                                                                             Cập nhật
                                                                         </Button>
@@ -664,7 +671,7 @@ export default function RoomTabs() {
                                                                             color="error"
                                                                             onClick={(e) => handleDeactivate(category, e)}
                                                                             size="small"
-                                                                            sx={{ minWidth: 64, fontSize: '0.6rem' }} // 80 * 0.8, 0.75rem * 0.8
+                                                                            sx={{ minWidth: 64, fontSize: '0.6rem' }}
                                                                         >
                                                                             Ngừng kinh doanh
                                                                         </Button>
@@ -673,7 +680,7 @@ export default function RoomTabs() {
                                                                             color="error"
                                                                             onClick={(e) => handleDelete(category, e)}
                                                                             size="small"
-                                                                            sx={{ minWidth: 64, fontSize: '0.6rem' }} // 80 * 0.8, 0.75rem * 0.8
+                                                                            sx={{ minWidth: 64, fontSize: '0.6rem' }}
                                                                         >
                                                                             Xóa
                                                                         </Button>
@@ -686,7 +693,7 @@ export default function RoomTabs() {
                                             ))
                                         ) : (
                                             <TableRow>
-                                                <TableCell colSpan={9} align="center" sx={{ fontSize: '0.6rem' }}> {/* 0.75rem * 0.8 */}
+                                                <TableCell colSpan={9} align="center" sx={{ fontSize: '0.6rem' }}>
                                                     Không có dữ liệu hạng phòng
                                                 </TableCell>
                                             </TableRow>
@@ -702,28 +709,28 @@ export default function RoomTabs() {
                                 rowsPerPage={recordsPerPage}
                                 onRowsPerPageChange={handleRowsPerPageChange}
                                 rowsPerPageOptions={[3, 5, 10, 15]}
-                                sx={{ fontSize: '0.6rem' }} // 0.75rem * 0.8
+                                sx={{ fontSize: '0.6rem' }}
                             />
                         </CustomTabPanel>
                         <CustomTabPanel value={value} index={1}>
-                            <Typography variant="h6" sx={{ mb: 1.6, px: 0.8, fontSize: '0.8rem' }}> {/* 2 * 0.8, 1 * 0.8, 1rem * 0.8 */}
+                            <Typography variant="h6" sx={{ mb: 1.6, px: 0.8, fontSize: '0.8rem' }}>
                                 Danh sách phòng
                             </Typography>
-                            <TableContainer sx={{ maxHeight: '320px' }}> {/* 400px * 0.8 */}
-                                <Table size="small" stickyHeader sx={{ fontSize: '0.6rem' }}> {/* 0.75rem * 0.8 */}
+                            <TableContainer sx={{ maxHeight: '320px' }}>
+                                <Table size="small" stickyHeader sx={{ fontSize: '0.6rem' }}>
                                     <TableHead>
                                         <TableRow>
                                             {roomsColumns.map((column) => (
                                                 <TableCell
                                                     key={column.id}
                                                     sx={{
-                                                        px: 0.4, // 0.5 * 0.8
-                                                        py: 0.4, // 0.5 * 0.8
+                                                        px: 0.4,
+                                                        py: 0.4,
                                                         width: column.width,
                                                         whiteSpace: 'nowrap',
                                                         fontWeight: 'bold',
                                                         backgroundColor: '#f5f5f5',
-                                                        fontSize: '0.6rem', // 0.75rem * 0.8
+                                                        fontSize: '0.6rem',
                                                     }}
                                                 >
                                                     {column.label}
@@ -745,61 +752,82 @@ export default function RoomTabs() {
                                                             },
                                                         }}
                                                     >
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{room.id}</TableCell> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{room.roomCategory?.name || 'Không xác định'}</TableCell> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{room.floor !== null && room.floor !== undefined ? room.floor : 'Không xác định'}</TableCell> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
+                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{room.id}</TableCell>
+                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{room.roomCategory?.name || 'Không xác định'}</TableCell>
+                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{room.floor !== null && room.floor !== undefined ? room.floor : 'Không xác định'}</TableCell>
+                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>
                                                             <Box
                                                                 sx={{
                                                                     display: 'inline-block',
-                                                                    px: 0.4, // 0.5 * 0.8
-                                                                    py: 0.2, // 0.25 * 0.8
-                                                                    borderRadius: 0.8, // 1 * 0.8
+                                                                    px: 0.4,
+                                                                    py: 0.2,
+                                                                    borderRadius: 0.8,
                                                                     bgcolor: room.status === 'AVAILABLE' ? 'success.light' : room.status === 'IN_USE' ? 'warning.light' : 'error.light',
                                                                     color: 'white',
-                                                                    fontSize: '0.6rem', // 0.75rem * 0.8
+                                                                    fontSize: '0.6rem',
                                                                 }}
                                                             >
                                                                 {getRoomStatusLabel(room.status)}
                                                             </Box>
                                                         </TableCell>
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{room.isClean ? 'Sạch' : 'Chưa dọn'}</TableCell> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
+                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{room.isClean ? 'Sạch' : 'Chưa dọn'}</TableCell>
                                                     </TableRow>
                                                     {expandedRoomRow === room.id && expandedRoomDetails && (
                                                         <TableRow>
                                                             <TableCell colSpan={5} sx={{ p: 0 }}>
                                                                 <Box sx={{
-                                                                    p: 0.8, // 1 * 0.8
+                                                                    p: 0.8,
                                                                     bgcolor: 'rgba(0, 0, 0, 0.02)',
                                                                     borderTop: '1px dashed rgba(0, 0, 0, 0.1)',
                                                                     borderBottom: '1px dashed rgba(0, 0, 0, 0.1)',
-                                                                    fontSize: '0.6rem' // 0.75rem * 0.8
+                                                                    fontSize: '0.6rem'
                                                                 }}>
-                                                                    <Typography variant="subtitle1" sx={{ mb: 0.8, fontWeight: 'bold', fontSize: '0.7rem' }}> {/* 1 * 0.8, 0.875rem * 0.8 */}
+                                                                    <Typography variant="subtitle1" sx={{ mb: 0.8, fontWeight: 'bold', fontSize: '0.7rem' }}>
                                                                         Thông tin chi tiết
                                                                     </Typography>
-                                                                    <Grid container spacing={0.8}> {/* 1 * 0.8 */}
-                                                                        <Grid item xs={6}>
-                                                                            <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
-                                                                                <strong>Mã phòng:</strong> {expandedRoomDetails.id}
-                                                                            </Typography>
-                                                                            <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
-                                                                                <strong>Hạng phòng:</strong> {expandedRoomDetails.roomCategory?.name || 'Không xác định'}
-                                                                            </Typography>
-                                                                            <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
-                                                                                <strong>Tầng:</strong> {expandedRoomDetails.floor !== null && expandedRoomDetails.floor !== undefined ? expandedRoomDetails.floor : 'Không xác định'}
-                                                                            </Typography>
+                                                                    <Grid container spacing={0.8}>
+                                                                        <Grid item xs={4}>
+                                                                            <Box>
+                                                                                <Typography variant="body2" sx={{ fontSize: '0.6rem', fontWeight: 'bold' }}>
+                                                                                    Ảnh:
+                                                                                </Typography>
+                                                                                <img
+                                                                                    src={expandedRoomDetails.imgUrl ? (expandedRoomDetails.imgUrl.startsWith('http') ? expandedRoomDetails.imgUrl : `http://localhost:8080/${expandedRoomDetails.imgUrl}`) : placeholderImage}
+                                                                                    alt={`Phòng ${expandedRoomDetails.id}`}
+                                                                                    style={{
+                                                                                        width: '120px', // 150px * 0.8
+                                                                                        height: '120px', // 150px * 0.8
+                                                                                        objectFit: 'cover',
+                                                                                        marginTop: '6.4px' // 8px * 0.8
+                                                                                    }}
+                                                                                />
+                                                                            </Box>
                                                                         </Grid>
-                                                                        <Grid item xs={6}>
-                                                                            <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
-                                                                                <strong>Tình trạng:</strong> {getRoomStatusLabel(expandedRoomDetails.status)}
-                                                                            </Typography>
-                                                                            <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
-                                                                                <strong>Trạng thái dọn dẹp:</strong> {expandedRoomDetails.isClean ? 'Sạch' : 'Chưa dọn'}
-                                                                            </Typography>
-                                                                            <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}> {/* 0.5 * 0.8, 0.75rem * 0.8 */}
-                                                                                <strong>Chi nhánh:</strong> Chi nhánh trung tâm
-                                                                            </Typography>
+                                                                        <Grid item xs={8}>
+                                                                            <Grid container spacing={0.8}>
+                                                                                <Grid item xs={6}>
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
+                                                                                        <strong>Mã phòng:</strong> {expandedRoomDetails.id}
+                                                                                    </Typography>
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
+                                                                                        <strong>Hạng phòng:</strong> {expandedRoomDetails.roomCategory?.name || 'Không xác định'}
+                                                                                    </Typography>
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
+                                                                                        <strong>Tầng:</strong> {expandedRoomDetails.floor !== null && expandedRoomDetails.floor !== undefined ? expandedRoomDetails.floor : 'Không xác định'}
+                                                                                    </Typography>
+                                                                                </Grid>
+                                                                                <Grid item xs={6}>
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
+                                                                                        <strong>Tình trạng:</strong> {getRoomStatusLabel(expandedRoomDetails.status)}
+                                                                                    </Typography>
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
+                                                                                        <strong>Trạng thái dọn dẹp:</strong> {expandedRoomDetails.isClean ? 'Sạch' : 'Chưa dọn'}
+                                                                                    </Typography>
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
+                                                                                        <strong>Chi nhánh:</strong> Chi nhánh trung tâm
+                                                                                    </Typography>
+                                                                                </Grid>
+                                                                            </Grid>
                                                                         </Grid>
                                                                     </Grid>
                                                                 </Box>
@@ -810,7 +838,7 @@ export default function RoomTabs() {
                                             ))
                                         ) : (
                                             <TableRow>
-                                                <TableCell colSpan={5} align="center" sx={{ fontSize: '0.6rem' }}> {/* 0.75rem * 0.8 */}
+                                                <TableCell colSpan={5} align="center" sx={{ fontSize: '0.6rem' }}>
                                                     Không có dữ liệu phòng
                                                 </TableCell>
                                             </TableRow>
@@ -826,7 +854,7 @@ export default function RoomTabs() {
                                 rowsPerPage={recordsPerPage}
                                 onRowsPerPageChange={handleRowsPerPageChange}
                                 rowsPerPageOptions={[3, 5, 10, 15]}
-                                sx={{ fontSize: '0.6rem' }} // 0.75rem * 0.8
+                                sx={{ fontSize: '0.6rem' }}
                             />
                         </CustomTabPanel>
                     </Paper>
