@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Grid,
     MenuItem, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel,
-    IconButton, InputAdornment, Typography, Box, CircularProgress
+    IconButton, InputAdornment, Typography, Box, CircularProgress, Snackbar, Alert
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -10,10 +10,11 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import CloseIcon from '@mui/icons-material/Close';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import SaveIcon from '@mui/icons-material/Save'; // Import Save icon
+import SaveIcon from '@mui/icons-material/Save';
 import viLocale from 'date-fns/locale/vi';
+import guestService from '../../../service/guest.service';
 
-// Sample data - replace with your actual data fetching
+// Sample data - replace with data from API
 const idTypes = ['CMND', 'CCCD', 'Hộ chiếu'];
 const nationalities = ['Việt Nam', 'Hoa Kỳ', 'Nhật Bản', 'Hàn Quốc', 'Trung Quốc'];
 
@@ -51,7 +52,7 @@ const modernLabelStyles = {
     display: 'block', // Ensure label takes full width
 };
 
-function GuestRegistrationForm({ open = true, onClose }) {
+function GuestRegistrationForm({ open = true, onClose, bookingId, onSuccess }) {
     const [formData, setFormData] = useState({
         room: 'P.203',
         fullName: '',
@@ -62,11 +63,16 @@ function GuestRegistrationForm({ open = true, onClose }) {
         address: '',
         idType: 'CCCD', // Default value for ID Type
         idNumber: '',
-        stayReason: '',
+        email: '',
         notes: ''
     });
     const [errors, setErrors] = useState({});
     const [isLoading, setIsLoading] = useState(false);
+    const [notification, setNotification] = useState({
+        open: false,
+        message: '',
+        severity: 'success' // 'success', 'error', 'warning', 'info'
+    });
 
     // Basic validation - can be expanded
     const validateForm = () => {
@@ -98,23 +104,59 @@ function GuestRegistrationForm({ open = true, onClose }) {
         // This would likely involve accessing the user's camera or file system
     };
 
+    const handleCloseNotification = () => {
+        setNotification(prev => ({ ...prev, open: false }));
+    };
+
     const handleSave = async () => {
         if (!validateForm()) {
             console.log('Validation failed', errors);
             return;
         }
+
         setIsLoading(true);
         try {
-            console.log('Saving data:', formData);
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            // Close dialog on successful save
-            if (onClose) onClose();
-            // Reset form after successful save (optional)
-            // setFormData({ ...initialFormData });
-        } catch (err) {
-            console.error('Error saving data:', err);
-            // Display error message to user
+            // Prepare data for API
+            const guestData = {
+                bookingId: bookingId, // From props
+                fullName: formData.fullName,
+                gender: formData.gender,
+                birthDate: formData.birthDate ? formData.birthDate.toISOString().split('T')[0] : null,
+                phoneNumber: formData.phoneNumber,
+                nationality: formData.nationality,
+                address: formData.address,
+                idType: formData.idType,
+                idNumber: formData.idNumber,
+                email: formData.email,
+                notes: formData.notes
+            };
+
+            // Call API to register guest
+            const response = await guestService.registerGuest(guestData);
+            
+            setNotification({
+                open: true,
+                message: 'Thêm khách lưu trú thành công',
+                severity: 'success'
+            });
+
+            // Notify parent component of success
+            if (onSuccess) onSuccess(response.data);
+            
+            // Close dialog after short delay to show success message
+            setTimeout(() => {
+                if (onClose) onClose();
+            }, 1500);
+            
+        } catch (error) {
+            console.error('Error saving guest registration:', error);
+            
+            // Show error notification
+            setNotification({
+                open: true,
+                message: error.response?.data?.message || 'Lỗi khi thêm khách lưu trú',
+                severity: 'error'
+            });
         } finally {
             setIsLoading(false);
         }
@@ -292,6 +334,7 @@ function GuestRegistrationForm({ open = true, onClose }) {
                                             }}
                                         />
                                     </div>
+
                                 </Grid>
                                 <Grid item xs={12} sm={6}> {/* Quốc tịch takes half width on sm+ */}
                                     <div>
@@ -366,6 +409,18 @@ function GuestRegistrationForm({ open = true, onClose }) {
                                 </Grid>
                             </Grid>
 
+
+                            <div>
+                                <FormLabel component="legend" sx={modernLabelStyles}>Email</FormLabel>
+                                <TextField
+                                    fullWidth
+                                    placeholder="Nhập email"
+                                    value={formData.email}
+                                    onChange={handleChange('email')}
+                                    size="small"
+                                    sx={modernInputStyles}
+                                />
+                            </div>
                             {/* Địa chỉ (Full width within 50% column) */}
                             <div>
                                 <FormLabel component="legend" sx={modernLabelStyles}>Địa chỉ</FormLabel>
@@ -374,19 +429,6 @@ function GuestRegistrationForm({ open = true, onClose }) {
                                     placeholder="Nhập địa chỉ"
                                     value={formData.address}
                                     onChange={handleChange('address')}
-                                    size="small"
-                                    sx={modernInputStyles}
-                                />
-                            </div>
-
-                            {/* Lý do lưu trú (Full width within 50% column) */}
-                            <div>
-                                <FormLabel component="legend" sx={modernLabelStyles}>Lý do lưu trú</FormLabel>
-                                <TextField
-                                    fullWidth
-                                    placeholder="Nhập lý do lưu trú"
-                                    value={formData.stayReason}
-                                    onChange={handleChange('stayReason')}
                                     size="small"
                                     sx={modernInputStyles}
                                 />
@@ -473,6 +515,22 @@ function GuestRegistrationForm({ open = true, onClose }) {
                     Lưu
                 </Button>
             </Box>
+
+            {/* Notification Snackbar */}
+            <Snackbar 
+                open={notification.open} 
+                autoHideDuration={6000} 
+                onClose={handleCloseNotification}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert 
+                    onClose={handleCloseNotification} 
+                    severity={notification.severity}
+                    sx={{ width: '100%' }}
+                >
+                    {notification.message}
+                </Alert>
+            </Snackbar>
         </Dialog>
     );
 }
