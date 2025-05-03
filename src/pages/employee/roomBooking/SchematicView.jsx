@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Card, CardContent, Typography, Chip, IconButton } from '@mui/material';
+import { Box, Card, CardContent, Typography, Chip, IconButton, Menu, MenuItem } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import Brightness2Icon from '@mui/icons-material/Brightness2';
@@ -12,8 +12,6 @@ import RoomViewService from "../../../service/admin/room.service.js";
 import RoomDetailsDialog from './RoomDetailsDialog';
 import QuickBookingDialog from './QuickBookingDialog';
 
-
-
 export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeChange }) {
     const [anchorElSearch, setAnchorElSearch] = useState(null);
     const [anchorElPriceTable, setAnchorElPriceTable] = useState(null);
@@ -24,6 +22,8 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [roomDetailsDialogOpen, setRoomDetailsDialogOpen] = useState(false);
     const [quickBookingDialogOpen, setQuickBookingDialogOpen] = useState(false);
+    const [menuAnchorEl, setMenuAnchorEl] = useState(null);
+    const [menuRoom, setMenuRoom] = useState(null);
 
     useEffect(() => {
         const fetchRooms = async () => {
@@ -103,9 +103,12 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
 
     const getRoomBackgroundColor = (status) => {
         switch (status) {
-            case 'IN_USE': return '#279656';
-            case 'CHECKOUT_SOON': return '#FFFFFF';
-            case 'AVAILABLE': return '#FFFFFF';
+            case 'IN_USE': return '#E8F5E9'; // Light green for rooms in use
+            case 'CHECKOUT_SOON': return '#E3F2FD'; // Light blue for rooms soon to checkout
+            case 'OVERDUE': return '#E1F5FE'; // Light cyan for overdue rooms
+            case 'UPCOMING': return '#FFF8E1'; // Light amber for upcoming bookings
+            case 'AVAILABLE': return '#FFFFFF'; // White for available rooms
+            case 'MAINTENANCE': return '#FFEBEE'; // Light red for maintenance rooms
             default: return '#FFFFFF';
         }
     };
@@ -128,6 +131,47 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                 const filteredRooms = allRooms.filter(room => room.status === status);
                 setRooms(filteredRooms);
             }
+        }
+    };
+
+    // Handle menu open for room actions
+    const handleRoomMenuClick = (event, room) => {
+        event.stopPropagation();
+        setMenuAnchorEl(event.currentTarget);
+        setMenuRoom(room);
+    };
+
+    // Handle menu close
+    const handleMenuClose = () => {
+        setMenuAnchorEl(null);
+        setMenuRoom(null);
+    };
+
+    // Toggle room cleaning status
+    const handleToggleCleanStatus = async () => {
+        if (!menuRoom) return;
+        
+        try {
+            const newCleanStatus = !menuRoom.isClean;
+            console.log(`Changing room ${menuRoom.id} cleaning status to: ${newCleanStatus ? 'Đã dọn' : 'Chưa dọn'}`);
+            
+            // Update room cleaning status via API
+            await RoomViewService.updateRoomCleanStatus(menuRoom.id, newCleanStatus);
+            
+            // Update the local state
+            const updatedRooms = rooms.map(room => 
+                room.id === menuRoom.id ? { ...room, isClean: newCleanStatus } : room
+            );
+            setRooms(updatedRooms);
+            
+            const updatedAllRooms = allRooms.map(room => 
+                room.id === menuRoom.id ? { ...room, isClean: newCleanStatus } : room
+            );
+            setAllRooms(updatedAllRooms);
+            
+            handleMenuClose();
+        } catch (error) {
+            console.error('Error updating room cleaning status:', error);
         }
     };
 
@@ -248,7 +292,6 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 2, mt: 2 }}>
                         {rooms.map((room) => {
                             const statusInfo = getStatusLabelAndColor(room.status, room.isClean);
-                            const backgroundColor = getRoomBackgroundColor(room.status);
                             const roomCategory = room.roomCategory || {};
                             
                             // Kiểm tra xem card có thể click được hay không
@@ -266,8 +309,8 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                     sx={{
                                         borderRadius: 4,
                                         position: 'relative',
-                                        backgroundColor: backgroundColor,
-                                        color: backgroundColor === '#FFFFFF' ? 'inherit' : '#FFFFFF',
+                                        backgroundColor: getRoomBackgroundColor(room.status),
+                                        color: 'inherit',
                                         boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
                                         border: '1px solid #e0e0e0',
                                         cursor: 'pointer',
@@ -295,10 +338,8 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                             />
                                             <IconButton 
                                                 size="small" 
-                                                sx={{ color: backgroundColor === '#FFFFFF' ? 'inherit' : '#FFFFFF' }}
-                                                onClick={(e) => {
-                                                    e.stopPropagation(); // Ngăn sự kiện click lan tỏa đến card
-                                                }}
+                                                sx={{ color: 'inherit' }}
+                                                onClick={(e) => handleRoomMenuClick(e, room)}
                                             >
                                                 <MoreVertIcon />
                                             </IconButton>
@@ -308,7 +349,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                                 variant="h6"
                                                 sx={{
                                                     textAlign: 'left',
-                                                    color: backgroundColor === '#FFFFFF' ? 'inherit' : '#FFFFFF',
+                                                    color: 'inherit',
                                                     fontWeight: 'bold',
                                                     fontSize: '1.2rem',
                                                 }}
@@ -320,7 +361,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                             variant="body2"
                                             sx={{
                                                 mb: 1,
-                                                color: backgroundColor === '#FFFFFF' ? '#757575' : '#FFFFFF',
+                                                color: '#757575',
                                                 fontSize: '0.9rem',
                                                 whiteSpace: 'nowrap',
                                                 overflow: 'hidden',
@@ -333,7 +374,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                             variant="body2"
                                             sx={{
                                                 mb: 2,
-                                                color: backgroundColor === '#FFFFFF' ? '#757575' : '#FFFFFF',
+                                                color: '#757575',
                                                 fontSize: '0.8rem',
                                                 fontStyle: 'italic',
                                                 whiteSpace: 'nowrap',
@@ -345,28 +386,28 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                         </Typography>
                                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <AccessTimeIcon fontSize="small" sx={{ color: backgroundColor === '#FFFFFF' ? 'inherit' : '#FFFFFF' }} />
+                                                <AccessTimeIcon fontSize="small" sx={{ color: 'inherit' }} />
                                                 <Typography
                                                     variant="body2"
-                                                    sx={{ color: backgroundColor === '#FFFFFF' ? 'inherit' : '#FFFFFF', fontSize: '0.9rem' }}
+                                                    sx={{ color: 'inherit', fontSize: '0.9rem' }}
                                                 >
                                                     {roomCategory.hourlyPrice?.toLocaleString('vi-VN', { style: 'decimal' }) || '0'}đ
                                                 </Typography>
                                             </Box>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <WbSunnyIcon fontSize="small" sx={{ color: backgroundColor === '#FFFFFF' ? 'inherit' : '#FFFFFF' }} />
+                                                <WbSunnyIcon fontSize="small" sx={{ color: 'inherit' }} />
                                                 <Typography
                                                     variant="body2"
-                                                    sx={{ color: backgroundColor === '#FFFFFF' ? 'inherit' : '#FFFFFF', fontSize: '0.9rem' }}
+                                                    sx={{ color: 'inherit', fontSize: '0.9rem' }}
                                                 >
                                                     {roomCategory.dailyPrice?.toLocaleString('vi-VN', { style: 'decimal' }) || '0'}đ
                                                 </Typography>
                                             </Box>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <Brightness2Icon fontSize="small" sx={{ color: backgroundColor === '#FFFFFF' ? 'inherit' : '#FFFFFF' }} />
+                                                <Brightness2Icon fontSize="small" sx={{ color: 'inherit' }} />
                                                 <Typography
                                                     variant="body2"
-                                                    sx={{ color: backgroundColor === '#FFFFFF' ? 'inherit' : '#FFFFFF', fontSize: '0.9rem' }}
+                                                    sx={{ color: 'inherit', fontSize: '0.9rem' }}
                                                 >
                                                     {roomCategory.overnightPrice?.toLocaleString('vi-VN', { style: 'decimal' }) || '0'}đ
                                                 </Typography>
@@ -384,6 +425,17 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                 )}
             </Box>
 
+            {/* Room action menu */}
+            <Menu
+                anchorEl={menuAnchorEl}
+                open={Boolean(menuAnchorEl)}
+                onClose={handleMenuClose}
+            >
+                <MenuItem onClick={handleToggleCleanStatus}>
+                    {menuRoom?.isClean ? 'Đánh dấu chưa dọn' : 'Đánh dấu đã dọn'}
+                </MenuItem>
+            </Menu>
+
             {/* Dialog chi tiết phòng cho phòng đang sử dụng */}
             <RoomDetailsDialog
                 open={roomDetailsDialogOpen}
@@ -391,7 +443,8 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                 roomData={selectedRoom && {
                     roomNumber: `P.${selectedRoom?.id?.toString().padStart(3, '0') || '000'}`,
                     roomType: selectedRoom?.roomCategory?.name || 'Phòng tiêu chuẩn',
-                    status: 'Đang sử dụng',
+                    status: selectedRoom?.status,
+                    isClean: selectedRoom?.isClean,
                     customerType: 'Khách lẻ',
                     guestInfo: '0 người lớn, 0 trẻ em, 0 giấy tờ',
                     bookingId: `DP${selectedRoom?.id?.toString().padStart(6, '0') || '000000'}`,

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Typography } from '@mui/material';
+import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Typography, IconButton, Menu, MenuItem } from '@mui/material';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import SearchBar from './SearchBar';
 import ViewModeButtons from './ViewModeButtons';
 import ActionButtons from './ActionButtons';
@@ -18,6 +19,8 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [roomDetailsDialogOpen, setRoomDetailsDialogOpen] = useState(false);
     const [quickBookingDialogOpen, setQuickBookingDialogOpen] = useState(false);
+    const [menuAnchorEl, setMenuAnchorEl] = useState(null);
+    const [menuRoom, setMenuRoom] = useState(null);
 
     useEffect(() => {
         const fetchRooms = async () => {
@@ -153,6 +156,47 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
         }
     };
 
+    // Handle menu open for room actions
+    const handleRoomMenuClick = (event, room) => {
+        event.stopPropagation();
+        setMenuAnchorEl(event.currentTarget);
+        setMenuRoom(room);
+    };
+
+    // Handle menu close
+    const handleMenuClose = () => {
+        setMenuAnchorEl(null);
+        setMenuRoom(null);
+    };
+
+    // Toggle room cleaning status
+    const handleToggleCleanStatus = async () => {
+        if (!menuRoom) return;
+        
+        try {
+            const newCleanStatus = !menuRoom.isClean;
+            console.log(`Changing room ${menuRoom.id} cleaning status to: ${newCleanStatus ? 'Đã dọn' : 'Chưa dọn'}`);
+            
+            // Update room cleaning status via API
+            await RoomViewService.updateRoomCleanStatus(menuRoom.id, newCleanStatus);
+            
+            // Update the local state
+            const updatedRooms = rooms.map(room => 
+                room.id === menuRoom.id ? { ...room, isClean: newCleanStatus } : room
+            );
+            setRooms(updatedRooms);
+            
+            const updatedAllRooms = allRooms.map(room => 
+                room.id === menuRoom.id ? { ...room, isClean: newCleanStatus } : room
+            );
+            setAllRooms(updatedAllRooms);
+            
+            handleMenuClose();
+        } catch (error) {
+            console.error('Error updating room cleaning status:', error);
+        }
+    };
+
     const statusCounts = getRoomStatusCounts();
 
     // Xử lý khi click vào hàng trong bảng phòng
@@ -220,6 +264,19 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
         refreshRoomData(); // Làm mới dữ liệu phòng sau khi đóng dialog
     };
 
+    // Function to get background color based on room status
+    const getRoomBackgroundColor = (status) => {
+        switch (status) {
+            case 'IN_USE': return '#E8F5E9'; // Light green for rooms in use
+            case 'CHECKOUT_SOON': return '#E3F2FD'; // Light blue for rooms soon to checkout
+            case 'OVERDUE': return '#E1F5FE'; // Light cyan for overdue rooms
+            case 'UPCOMING': return '#FFF8E1'; // Light amber for upcoming bookings
+            case 'AVAILABLE': return '#FFFFFF'; // White for available rooms
+            case 'MAINTENANCE': return '#FFEBEE'; // Light red for maintenance rooms
+            default: return '#FFFFFF';
+        }
+    };
+
     return (
         <Box sx={{ flexGrow: 1 }}>
             <Box
@@ -281,6 +338,7 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
                                         <TableCell>Giờ trả</TableCell>
                                         <TableCell>Tổng cộng</TableCell>
                                         <TableCell>Khách đã trả</TableCell>
+                                        <TableCell>Thao tác</TableCell>
                                         <TableCell></TableCell>
                                     </TableRow>
                                 </TableHead>
@@ -294,6 +352,7 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
                                                 onClick={() => handleRoomRowClick(room)}
                                                 sx={{ 
                                                     cursor: 'pointer',
+                                                    backgroundColor: getRoomBackgroundColor(room.status),
                                                     '&:hover': {
                                                         backgroundColor: '#f5f5f5'
                                                     }
@@ -309,6 +368,14 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
                                                 <TableCell>{bookingData.total}đ</TableCell>
                                                 <TableCell>{bookingData.paid}đ</TableCell>
                                                 <TableCell onClick={(e) => e.stopPropagation()}>{bookingData.action}</TableCell>
+                                                <TableCell onClick={(e) => e.stopPropagation()}>
+                                                    <IconButton 
+                                                        size="small" 
+                                                        onClick={(e) => handleRoomMenuClick(e, room)}
+                                                    >
+                                                        <MoreVertIcon />
+                                                    </IconButton>
+                                                </TableCell>
                                             </TableRow>
                                         );
                                     })}
@@ -323,6 +390,17 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
                 )}
             </Box>
             
+            {/* Room action menu */}
+            <Menu
+                anchorEl={menuAnchorEl}
+                open={Boolean(menuAnchorEl)}
+                onClose={handleMenuClose}
+            >
+                <MenuItem onClick={handleToggleCleanStatus}>
+                    {menuRoom?.isClean ? 'Đánh dấu chưa dọn' : 'Đánh dấu đã dọn'}
+                </MenuItem>
+            </Menu>
+            
             {/* Dialog chi tiết phòng cho phòng đang sử dụng */}
             <RoomDetailsDialog
                 open={roomDetailsDialogOpen}
@@ -330,7 +408,8 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
                 roomData={selectedRoom && {
                     roomNumber: `P.${selectedRoom?.id?.toString().padStart(3, '0') || '000'}`,
                     roomType: selectedRoom?.roomCategory?.name || 'Phòng tiêu chuẩn',
-                    status: 'Đang sử dụng',
+                    status: selectedRoom?.status,
+                    isClean: selectedRoom?.isClean,
                     customerType: 'Khách lẻ',
                     guestInfo: '0 người lớn, 0 trẻ em, 0 giấy tờ',
                     bookingId: `DP${selectedRoom?.id?.toString().padStart(6, '0') || '000000'}`,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Card, CardContent, Typography, Chip, IconButton, Button } from '@mui/material';
+import { Box, Card, CardContent, Typography, Chip, IconButton, Button, Menu, MenuItem } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import SearchBar from './SearchBar';
 import ViewModeButtons from './ViewModeButtons';
@@ -19,6 +19,8 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [roomDetailsDialogOpen, setRoomDetailsDialogOpen] = useState(false);
     const [quickBookingDialogOpen, setQuickBookingDialogOpen] = useState(false);
+    const [menuAnchorEl, setMenuAnchorEl] = useState(null);
+    const [menuRoom, setMenuRoom] = useState(null);
 
     useEffect(() => {
         const fetchRooms = async () => {
@@ -163,6 +165,47 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
 
     const statusCounts = getRoomStatusCounts();
 
+    // Handle menu open for room actions
+    const handleRoomMenuClick = (event, room) => {
+        event.stopPropagation();
+        setMenuAnchorEl(event.currentTarget);
+        setMenuRoom(room);
+    };
+
+    // Handle menu close
+    const handleMenuClose = () => {
+        setMenuAnchorEl(null);
+        setMenuRoom(null);
+    };
+
+    // Toggle room cleaning status
+    const handleToggleCleanStatus = async () => {
+        if (!menuRoom) return;
+        
+        try {
+            const newCleanStatus = !menuRoom.isClean;
+            console.log(`Changing room ${menuRoom.id} cleaning status to: ${newCleanStatus ? 'Đã dọn' : 'Chưa dọn'}`);
+            
+            // Update room cleaning status via API
+            await RoomViewService.updateRoomCleanStatus(menuRoom.id, newCleanStatus);
+            
+            // Update the local state
+            const updatedRooms = rooms.map(room => 
+                room.id === menuRoom.id ? { ...room, isClean: newCleanStatus } : room
+            );
+            setRooms(updatedRooms);
+            
+            const updatedAllRooms = allRooms.map(room => 
+                room.id === menuRoom.id ? { ...room, isClean: newCleanStatus } : room
+            );
+            setAllRooms(updatedAllRooms);
+            
+            handleMenuClose();
+        } catch (error) {
+            console.error('Error updating room cleaning status:', error);
+        }
+    };
+
     // Xử lý khi click vào card phòng
     const handleRoomCardClick = async (room) => {
         if (!room) {
@@ -226,6 +269,19 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
     const handleQuickBookingDialogClose = () => {
         setQuickBookingDialogOpen(false);
         refreshRoomData(); // Làm mới dữ liệu phòng sau khi đóng dialog
+    };
+
+    // Function to get background color based on room status
+    const getRoomBackgroundColor = (status) => {
+        switch (status) {
+            case 'IN_USE': return '#E8F5E9'; // Light green for rooms in use
+            case 'CHECKOUT_SOON': return '#E3F2FD'; // Light blue for rooms soon to checkout
+            case 'OVERDUE': return '#E1F5FE'; // Light cyan for overdue rooms
+            case 'UPCOMING': return '#FFF8E1'; // Light amber for upcoming bookings
+            case 'AVAILABLE': return '#FFFFFF'; // White for available rooms
+            case 'MAINTENANCE': return '#FFEBEE'; // Light red for maintenance rooms
+            default: return '#FFFFFF';
+        }
     };
 
     return (
@@ -297,6 +353,7 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
                                             borderRadius: 2, 
                                             position: 'relative',
                                             cursor: 'pointer',
+                                            backgroundColor: getRoomBackgroundColor(room.status),
                                             '&:hover': {
                                                 boxShadow: 6
                                             }
@@ -311,9 +368,7 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
                                                 <Chip label={statusInfo.label} color={statusInfo.color} size="small" />
                                                 <IconButton 
                                                     size="small" 
-                                                    onClick={(e) => {
-                                                        e.stopPropagation(); // Ngăn sự kiện click lan tỏa đến card
-                                                    }}
+                                                    onClick={(e) => handleRoomMenuClick(e, room)}
                                                 >
                                                     <MoreVertIcon />
                                                 </IconButton>
@@ -346,6 +401,17 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
                 )}
             </Box>
 
+            {/* Room action menu */}
+            <Menu
+                anchorEl={menuAnchorEl}
+                open={Boolean(menuAnchorEl)}
+                onClose={handleMenuClose}
+            >
+                <MenuItem onClick={handleToggleCleanStatus}>
+                    {menuRoom?.isClean ? 'Đánh dấu chưa dọn' : 'Đánh dấu đã dọn'}
+                </MenuItem>
+            </Menu>
+
             {/* Dialog chi tiết phòng cho phòng đang sử dụng */}
             <RoomDetailsDialog
                 open={roomDetailsDialogOpen}
@@ -353,7 +419,8 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
                 roomData={selectedRoom && {
                     roomNumber: `P.${selectedRoom?.id?.toString().padStart(3, '0') || '000'}`,
                     roomType: selectedRoom?.roomCategory?.name || 'Phòng tiêu chuẩn',
-                    status: 'Đang sử dụng',
+                    status: selectedRoom?.status,
+                    isClean: selectedRoom?.isClean,
                     customerType: 'Khách lẻ',
                     guestInfo: '0 người lớn, 0 trẻ em, 0 giấy tờ',
                     bookingId: `DP${selectedRoom?.id?.toString().padStart(6, '0') || '000000'}`,

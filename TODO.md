@@ -12,6 +12,12 @@
   - Maintained full-width and white background
   - Preserved responsive design
 
+- [x] Add consistent background colors for room status in all views
+  - Implemented unified getRoomBackgroundColor function across all view modes
+  - Used gentle, appropriate background colors for different room statuses
+  - Maintained original UI structure and text colors
+  - Improved visual distinction between different room states
+
 ## Development Tasks 
 - [ ] Enhance "Khách lưu trú" functionality in InforApp component
   - [x] Add dialog to display all available guests
@@ -31,10 +37,10 @@
   - [x] Handle success and error states for booking process
   - [x] Pass selected room data from Grid/List/Schematic views to QuickBookingDialog
 
-- [ ] Implement complete room status display
+- [x] Implement complete room status display
   - [x] Update status logic according to documentation
   - [x] Implement correct room status transitions
-  - [ ] Create consistent status visualization across all views
+  - [x] Create consistent status visualization across all views with appropriate background colors
 
 ## Bug Fixes
 - [x] Fix "Khách lưu trú" click event in sidebar menu

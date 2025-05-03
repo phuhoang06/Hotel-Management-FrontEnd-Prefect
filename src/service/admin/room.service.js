@@ -68,6 +68,13 @@ class RoomViewService {
     static async updateRoomStatus(id, status, isClean) {
         return await axiosInstance.patch(`/rooms/${id}/status`, { status, isClean });
     }
+
+    /**
+     * Cập nhật trạng thái vệ sinh phòng
+     */
+    static async updateRoomCleanStatus(roomId, isClean) {
+        return await axiosInstance.put(`/rooms/${roomId}/clean-status`, { isClean });
+    }
 }
 
 export default RoomViewService;
