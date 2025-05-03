@@ -22,6 +22,7 @@ export default function FilterDialog({ open, onClose }) {
             TransitionComponent={FilterTransition}
             sx={{
                 '& .MuiDialog-paper': {
+
                     width: '40.00%',
                     maxWidth: 'none',
                     height: '100%',

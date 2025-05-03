@@ -149,21 +149,6 @@ export default function AppBarHeader({ onToggleMenu }) {
                 </Box>
 
                 <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    <IconButton size="large" color="inherit">
-                        <Badge badgeContent={2} color="error">
-                            <NotificationsIcon />
-                        </Badge>
-                    </IconButton>
-
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        <LocationOnIcon fontSize="small" />
-                        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13 }}>
-                            Chi nhánh trung tâm
-                        </Typography>
-                    </Box>
-
-                    <Typography sx={{ fontWeight: "bold" }}>0869931792</Typography>
-
                     <IconButton sx={{ p: 0 }} onClick={handleMenuOpen}>
                         <AccountCircle fontSize="large" />
                     </IconButton>
