@@ -140,35 +140,35 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
             return;
         }
         
+        // Ghi log thông tin phòng 
         console.log('Room clicked:', room);
+        console.log('Room ID:', room.id);
         console.log('Room status:', room.status);
         console.log('Room isClean:', room.isClean);
         
-        try {
-            // Cố gắng lấy thông tin chi tiết phòng mới nhất từ API
-            const res = await RoomViewService.getRoomById(room.id);
-            if (res.data && res.data.content) {
-                console.log('API response:', res.data.content);
-                setSelectedRoom(res.data.content);
-            } else {
-                console.log('Using existing room data');
-                setSelectedRoom(room);
-            }
-        } catch (err) {
-            console.error('Không thể lấy thông tin chi tiết phòng, sử dụng dữ liệu hiện có:', err);
-            setSelectedRoom(room);
+        // Đảm bảo phòng có ID
+        if (!room.id) {
+            console.error('Room ID is missing');
+            return;
         }
         
-        // Hiển thị dialog tương ứng dựa trên trạng thái phòng
-        if (room.status === 'IN_USE' || room.status === 'CHECKOUT_SOON' || room.status === 'OVERDUE') {
-            // Phòng đang sử dụng - Hiển thị dialog chi tiết phòng
-            console.log('Opening RoomDetailsDialog for occupied room');
-            setRoomDetailsDialogOpen(true);
-        } else {
-            // Tất cả các loại phòng khác - Hiển thị dialog đặt phòng nhanh
-            // Bao gồm: phòng trống đã dọn, phòng trống chưa dọn, phòng bảo trì, phòng sắp có khách
-            console.log('Opening QuickBookingDialog for any room state');
-            setQuickBookingDialogOpen(true);
+        try {
+            // Đặt thông tin phòng với ID được chọn
+            setSelectedRoom(room);
+            
+            // Hiển thị dialog tương ứng dựa trên trạng thái phòng
+            if (room.status === 'IN_USE' || room.status === 'CHECKOUT_SOON' || room.status === 'OVERDUE') {
+                // Phòng đang sử dụng - Hiển thị dialog chi tiết phòng
+                console.log('Opening RoomDetailsDialog for occupied room');
+                setRoomDetailsDialogOpen(true);
+            } else {
+                // Tất cả các loại phòng khác - Hiển thị dialog đặt phòng nhanh
+                // Bao gồm: phòng trống đã dọn, phòng trống chưa dọn, phòng bảo trì, phòng sắp có khách
+                console.log('Opening QuickBookingDialog for any room state');
+                setQuickBookingDialogOpen(true);
+            }
+        } catch (err) {
+            console.error('Lỗi xử lý phòng:', err);
         }
     };
 
@@ -411,6 +411,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
             <QuickBookingDialog
                 open={quickBookingDialogOpen}
                 onClose={handleQuickBookingDialogClose}
+                initialRoomData={selectedRoom}
             />
         </Box>
     );

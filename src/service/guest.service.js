@@ -87,25 +87,30 @@ class GuestService {
   }
 
   /**
-   * Register a guest for a booking
+   * Register a guest for a booking - WARNING: This method might not be supported
+   * as the documentation doesn't mention a specific endpoint for guest registrations.
    * 
    * @param {Object} guestData - The guest registration data
-   * @param {number} guestData.bookingId - ID of the booking
-   * @param {string} guestData.fullName - Full name of the guest
-   * @param {string} guestData.gender - Gender (MALE, FEMALE, OTHER)
-   * @param {string} guestData.birthDate - Date of birth (YYYY-MM-DD)
-   * @param {string} guestData.phoneNumber - Phone number
-   * @param {string} guestData.nationality - Nationality
-   * @param {string} guestData.address - Address
-   * @param {string} guestData.idType - ID type (CMND, CCCD, PASSPORT)
-   * @param {string} guestData.idNumber - ID number
-   * @param {string} guestData.email - Email address
-   * @param {string} guestData.notes - Additional notes
    * @returns {Promise} - Promise containing the registration response
+   * @deprecated - Consider using performWalkInCheckin or createCustomer instead
    */
   async registerGuest(guestData) {
+    console.warn('WARNING: registerGuest method might not be supported by the API. Consider using performWalkInCheckin instead.');
     try {
-      const response = await axiosInstance.post('/guest-registrations', guestData);
+      // This endpoint might not actually exist according to the documentation
+      const response = await axiosInstance.post('/customers', {
+        ...guestData,
+        // Map guestData fields to customer fields
+        fullName: guestData.fullName,
+        phone: guestData.phoneNumber,
+        gender: guestData.gender,
+        dob: guestData.birthDate,
+        nationality: guestData.nationality,
+        address: guestData.address,
+        idCard: guestData.idNumber,
+        email: guestData.email,
+        note: guestData.notes
+      });
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -114,21 +119,39 @@ class GuestService {
   }
 
   /**
-   * Get all guest registrations
+   * Perform a walk-in check-in
+   * 
+   * @param {Object} walkInData - The walk-in check-in data
+   * @param {number} walkInData.customerId - ID of the customer
+   * @param {string} walkInData.note - Optional notes
+   * @param {number} walkInData.paidAmount - Amount paid upfront
+   * @param {Array} walkInData.rooms - Array of room booking requests
+   * @returns {Promise} - Promise containing the booking response
+   */
+  async performWalkInCheckin(walkInData) {
+    try {
+      const response = await axiosInstance.post('/checkins/walkin', walkInData);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get available rooms
    * 
    * @param {Object} params - Search parameters
-   * @param {string} params.khaiBaoStartDate - Registration start date (ISO format)
-   * @param {string} params.khaiBaoEndDate - Registration end date (ISO format)
-   * @param {string} params.luuTruStartDate - Stay start date (ISO format)
-   * @param {string} params.luuTruEndDate - Stay end date (ISO format)
-   * @param {string} params.searchText - Search text for name, room, or booking
-   * @param {number} params.page - Page number (default: 0)
-   * @param {number} params.size - Page size (default: 10)
-   * @returns {Promise} - Promise containing guest registrations list
+   * @param {string} params.status - Room status (e.g., AVAILABLE)
+   * @param {string} params.keyword - Search keyword
+   * @param {number} params.floor - Floor number
+   * @param {number} params.page - Page number
+   * @param {number} params.size - Page size
+   * @returns {Promise} - Promise containing available rooms list
    */
-  async getAllGuestRegistrations(params = {}) {
+  async getAvailableRooms(params = {}) {
     try {
-      const response = await axiosInstance.get('/guest-registrations', { params });
+      const response = await axiosInstance.get('/rooms', { params });
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -137,15 +160,71 @@ class GuestService {
   }
 
   /**
-   * Get guest registrations by booking ID
+   * Get room details
+   * 
+   * @param {number} roomId - Room ID
+   * @returns {Promise} - Promise containing room details
+   */
+  async getRoomDetails(roomId) {
+    try {
+      const response = await axiosInstance.get(`/rooms/${roomId}`);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update room status
+   * 
+   * @param {number} roomId - Room ID
+   * @param {string} status - New room status
+   * @returns {Promise} - Promise containing update response
+   */
+  async updateRoomStatus(roomId, status) {
+    try {
+      const response = await axiosInstance.put(`/rooms/${roomId}/status`, { status });
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all guest registrations - WARNING: This method might not be supported
+   * as the documentation doesn't mention a specific endpoint for listing guest registrations.
+   * 
+   * @param {Object} params - Search parameters
+   * @returns {Promise} - Promise containing guest registrations list
+   * @deprecated - Consider using other methods from the documentation
+   */
+  async getAllGuestRegistrations(params = {}) {
+    console.warn('WARNING: getAllGuestRegistrations method might not be supported by the API.');
+    try {
+      // This is a fallback to customers endpoint, which might not provide the expected data
+      const response = await axiosInstance.get('/customers', { params });
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get guest registrations by booking ID - WARNING: This method might not be supported
+   * as the documentation doesn't mention a specific endpoint for getting guests by booking.
    * 
    * @param {number} bookingId - ID of the booking
    * @returns {Promise} - Promise containing guest registrations for the booking
+   * @deprecated - Consider using other methods from the documentation
    */
   async getGuestRegistrationsByBooking(bookingId) {
+    console.warn('WARNING: getGuestRegistrationsByBooking method might not be supported by the API.');
     try {
-      const response = await axiosInstance.get(`/guest-registrations/booking/${bookingId}`);
-      return response.data;
+      // This endpoint probably doesn't exist according to the documentation
+      throw new Error('API endpoint not available in documentation');
     } catch (error) {
       this.handleError(error);
       throw error;
@@ -153,15 +232,31 @@ class GuestService {
   }
 
   /**
-   * Update a guest registration
+   * Update a guest registration - WARNING: This method might not be supported
+   * as the documentation doesn't mention a specific endpoint for updating guest registrations.
    * 
    * @param {number} registrationId - ID of the registration
    * @param {Object} guestData - Updated guest data
    * @returns {Promise} - Promise containing the updated registration
+   * @deprecated - Consider using other methods from the documentation
    */
   async updateGuestRegistration(registrationId, guestData) {
+    console.warn('WARNING: updateGuestRegistration method might not be supported by the API.');
     try {
-      const response = await axiosInstance.put(`/guest-registrations/${registrationId}`, guestData);
+      // This is a fallback to customers endpoint, which might not provide the expected behavior
+      const response = await axiosInstance.put(`/customers/${registrationId}`, {
+        ...guestData,
+        // Map guestData fields to customer fields
+        fullName: guestData.fullName,
+        phone: guestData.phoneNumber,
+        gender: guestData.gender,
+        dob: guestData.birthDate,
+        nationality: guestData.nationality,
+        address: guestData.address,
+        idCard: guestData.idNumber,
+        email: guestData.email,
+        note: guestData.notes
+      });
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -170,15 +265,18 @@ class GuestService {
   }
 
   /**
-   * Delete a guest registration
+   * Delete a guest registration - WARNING: This method might not be supported
+   * as the documentation doesn't mention a specific endpoint for deleting guest registrations.
    * 
    * @param {number} registrationId - ID of the registration
    * @returns {Promise} - Promise containing the response
+   * @deprecated - Consider using other methods from the documentation
    */
   async deleteGuestRegistration(registrationId) {
+    console.warn('WARNING: deleteGuestRegistration method might not be supported by the API.');
     try {
-      const response = await axiosInstance.delete(`/guest-registrations/${registrationId}`);
-      return response.data;
+      // This endpoint probably doesn't exist according to the documentation
+      throw new Error('API endpoint not available in documentation');
     } catch (error) {
       this.handleError(error);
       throw error;
@@ -186,18 +284,37 @@ class GuestService {
   }
 
   /**
-   * Export guest registrations to file
+   * Export guest registrations to file - WARNING: This method might not be supported
+   * as the documentation doesn't mention a specific endpoint for exporting guest registrations.
    * 
    * @param {Object} params - Export parameters
-   * @param {string} params.startDate - Start date (ISO format)
-   * @param {string} params.endDate - End date (ISO format)
    * @returns {Promise} - Promise containing the file data
+   * @deprecated - Consider using other methods from the documentation
    */
   async exportGuestRegistrations(params) {
+    console.warn('WARNING: exportGuestRegistrations method might not be supported by the API.');
     try {
-      const response = await axiosInstance.get('/guest-registrations/export', { 
-        params,
-        responseType: 'blob' 
+      // This endpoint probably doesn't exist according to the documentation
+      throw new Error('API endpoint not available in documentation');
+    } catch (error) {
+      this.handleError(error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get most recently added customers
+   * 
+   * @param {number} limit - Maximum number of recent customers to return
+   * @returns {Promise} - Promise containing recent customers list
+   */
+  async getRecentCustomers(limit = 10) {
+    try {
+      const response = await axiosInstance.get('/customers', { 
+        params: { 
+          sort: 'createdAt,desc', 
+          size: limit 
+        } 
       });
       return response.data;
     } catch (error) {

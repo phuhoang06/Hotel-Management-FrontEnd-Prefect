@@ -64,7 +64,8 @@ function GuestRegistrationForm({ open = true, onClose, bookingId, onSuccess }) {
         idType: 'CCCD', // Default value for ID Type
         idNumber: '',
         email: '',
-        notes: ''
+        notes: '',
+        calendarOpen: false
     });
     const [errors, setErrors] = useState({});
     const [isLoading, setIsLoading] = useState(false);
@@ -77,12 +78,45 @@ function GuestRegistrationForm({ open = true, onClose, bookingId, onSuccess }) {
     // Basic validation - can be expanded
     const validateForm = () => {
         const newErrors = {};
-        if (!formData.fullName.trim()) newErrors.fullName = 'Vui lòng nhập họ tên';
-        if (!formData.phoneNumber.trim()) newErrors.phoneNumber = 'Vui lòng nhập số điện thoại';
-        if (!formData.idType) newErrors.idType = 'Vui lòng chọn loại giấy tờ';
-        if (!formData.idNumber.trim()) newErrors.idNumber = 'Vui lòng nhập số giấy tờ';
-        if (!formData.nationality) newErrors.nationality = 'Vui lòng chọn quốc tịch';
-        // Add validation for other fields as needed
+        // Validate fullName - required, max 100 characters
+        if (!formData.fullName.trim()) {
+            newErrors.fullName = 'Vui lòng nhập họ tên';
+        } else if (formData.fullName.trim().length > 100) {
+            newErrors.fullName = 'Họ tên không được vượt quá 100 ký tự';
+        }
+        
+        // Validate phone number - required, 10-20 digits
+        if (!formData.phoneNumber.trim()) {
+            newErrors.phoneNumber = 'Vui lòng nhập số điện thoại';
+        } else if (!/^[0-9]{10,20}$/.test(formData.phoneNumber.trim())) {
+            newErrors.phoneNumber = 'Số điện thoại phải từ 10-20 chữ số';
+        }
+        
+        // Validate email if provided
+        if (formData.email && formData.email.trim()) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(formData.email.trim())) {
+                newErrors.email = 'Email không hợp lệ';
+            } else if (formData.email.trim().length > 100) {
+                newErrors.email = 'Email không được vượt quá 100 ký tự';
+            }
+        }
+        
+        // Validate address if provided
+        if (formData.address && formData.address.trim().length > 255) {
+            newErrors.address = 'Địa chỉ không được vượt quá 255 ký tự';
+        }
+        
+        // Validate idNumber if provided
+        if (formData.idNumber && formData.idNumber.trim().length > 20) {
+            newErrors.idNumber = 'Số giấy tờ không được vượt quá 20 ký tự';
+        }
+        
+        // Validate nationality if provided
+        if (formData.nationality && formData.nationality.trim().length > 50) {
+            newErrors.nationality = 'Quốc tịch không được vượt quá 50 ký tự';
+        }
+        
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -96,6 +130,10 @@ function GuestRegistrationForm({ open = true, onClose, bookingId, onSuccess }) {
 
     const handleDateChange = (newVal) => {
         setFormData((prev) => ({ ...prev, birthDate: newVal }));
+    };
+
+    const handleCalendarClick = () => {
+        setFormData(prev => ({ ...prev, calendarOpen: !prev.calendarOpen }));
     };
 
     const handleScanClick = () => {
@@ -116,32 +154,37 @@ function GuestRegistrationForm({ open = true, onClose, bookingId, onSuccess }) {
 
         setIsLoading(true);
         try {
-            // Prepare data for API
-            const guestData = {
-                bookingId: bookingId, // From props
-                fullName: formData.fullName,
-                gender: formData.gender,
-                birthDate: formData.birthDate ? formData.birthDate.toISOString().split('T')[0] : null,
-                phoneNumber: formData.phoneNumber,
-                nationality: formData.nationality,
-                address: formData.address,
-                idType: formData.idType,
-                idNumber: formData.idNumber,
-                email: formData.email,
-                notes: formData.notes
+            // Chuẩn bị dữ liệu theo cấu trúc entity Customer
+            const customerData = {
+                fullName: formData.fullName.trim(),
+                phone: formData.phoneNumber.trim(),
+                email: formData.email && formData.email.trim() ? formData.email.trim() : undefined,
+                gender: formData.gender === 'Nam' ? 'MALE' : formData.gender === 'Nữ' ? 'FEMALE' : 'OTHER',
+                dob: formData.birthDate ? formData.birthDate.toISOString().split('T')[0] : undefined,
+                address: formData.address && formData.address.trim() ? formData.address.trim() : undefined,
+                idCard: formData.idNumber && formData.idNumber.trim() ? formData.idNumber.trim() : undefined,
+                nationality: formData.nationality || undefined,
+                note: formData.notes && formData.notes.trim() ? formData.notes.trim() : undefined
             };
 
-            // Call API to register guest
-            const response = await guestService.registerGuest(guestData);
+            // Lọc bỏ các trường undefined khỏi request
+            Object.keys(customerData).forEach(key => 
+                (customerData[key] === undefined) && delete customerData[key]
+            );
+
+            console.log('Sending customer data:', customerData);
+
+            // Call API to register customer/guest
+            const response = await guestService.createCustomer(customerData);
             
             setNotification({
                 open: true,
-                message: 'Thêm khách lưu trú thành công',
+                message: 'Thêm khách hàng thành công',
                 severity: 'success'
             });
 
             // Notify parent component of success
-            if (onSuccess) onSuccess(response.data);
+            if (onSuccess) onSuccess(response);
             
             // Close dialog after short delay to show success message
             setTimeout(() => {
@@ -149,12 +192,17 @@ function GuestRegistrationForm({ open = true, onClose, bookingId, onSuccess }) {
             }, 1500);
             
         } catch (error) {
-            console.error('Error saving guest registration:', error);
+            console.error('Error saving customer:', error);
             
-            // Show error notification
+            // Show error notification with detailed message if available
+            const errorMessage = error.response?.data?.message || 
+                                 error.response?.data?.error || 
+                                 error.message ||
+                                 'Lỗi khi thêm khách hàng';
+            
             setNotification({
                 open: true,
-                message: error.response?.data?.message || 'Lỗi khi thêm khách lưu trú',
+                message: errorMessage,
                 severity: 'error'
             });
         } finally {
@@ -294,19 +342,36 @@ function GuestRegistrationForm({ open = true, onClose, bookingId, onSuccess }) {
                                                                     <IconButton
                                                                         aria-label="toggle date picker"
                                                                         edge="end"
+                                                                        onClick={handleCalendarClick}
                                                                         sx={{
                                                                             color: '#9ca3af',
                                                                             '&:hover': { color: '#6b7280' },
                                                                             transition: 'color 0.2s ease-in-out',
                                                                         }}
+                                                                        className="date-picker-toggle"
                                                                     >
                                                                         <CalendarTodayIcon />
                                                                     </IconButton>
                                                                 </InputAdornment>
                                                             ),
                                                         },
+                                                    },
+                                                    popper: {
+                                                        sx: {
+                                                            '& .MuiPaper-root': {
+                                                                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                                                                borderRadius: '12px',
+                                                                border: '1px solid #e5e7eb',
+                                                            }
+                                                        }
                                                     }
                                                 }}
+                                                slots={{
+                                                    openPickerIcon: CalendarTodayIcon
+                                                }}
+                                                open={formData.calendarOpen}
+                                                onOpen={() => setFormData(prev => ({ ...prev, calendarOpen: true }))}
+                                                onClose={() => setFormData(prev => ({ ...prev, calendarOpen: false }))}
                                             />
                                         </LocalizationProvider>
                                     </div>

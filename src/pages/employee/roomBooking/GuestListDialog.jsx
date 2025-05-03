@@ -21,7 +21,10 @@ import {
     Divider,
     CircularProgress,
     Snackbar,
-    Alert
+    Alert,
+    Switch,
+    FormControlLabel,
+    Tooltip
 } from '@mui/material';
 import {
     Close as CloseIcon,
@@ -32,6 +35,7 @@ import {
     Edit as EditIcon,
     Delete as DeleteIcon,
     HomeWork as HomeWorkIcon,
+    NewReleases as NewReleasesIcon
 } from '@mui/icons-material';
 
 import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
@@ -98,6 +102,7 @@ export const GuestListDialog = ({ open, handleClose }) => {
     const [guestList, setGuestList] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [showRecentOnly, setShowRecentOnly] = useState(false);
     
     // Notification state
     const [notification, setNotification] = useState({
@@ -108,8 +113,36 @@ export const GuestListDialog = ({ open, handleClose }) => {
 
     // Fetch guest registrations when component mounts or search criteria change
     useEffect(() => {
-        fetchGuestRegistrations();
-    }, []);
+        if (showRecentOnly) {
+            fetchRecentCustomers();
+        } else {
+            fetchGuestRegistrations();
+        }
+    }, [showRecentOnly]);
+
+    // Fetch recent customers
+    const fetchRecentCustomers = async () => {
+        setIsLoading(true);
+        setError(null);
+        
+        try {
+            // Call API service to get recent customers
+            const response = await guestService.getRecentCustomers(10); // Lấy 10 khách hàng mới nhất
+            setGuestList(response.content || []);
+        } catch (error) {
+            console.error('Error fetching recent customers:', error);
+            setError('Không thể tải dữ liệu khách hàng mới nhất. Vui lòng thử lại sau.');
+            
+            // Show error notification
+            setNotification({
+                open: true,
+                message: error.response?.data?.message || 'Lỗi khi tải dữ liệu khách hàng mới nhất',
+                severity: 'error'
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     // Function to fetch guest registrations
     const fetchGuestRegistrations = async () => {
@@ -149,7 +182,16 @@ export const GuestListDialog = ({ open, handleClose }) => {
 
     // Handle refresh button click
     const handleRefresh = () => {
-        fetchGuestRegistrations();
+        if (showRecentOnly) {
+            fetchRecentCustomers();
+        } else {
+            fetchGuestRegistrations();
+        }
+    };
+
+    // Toggle between showing all guests and recent additions
+    const handleToggleRecentOnly = (event) => {
+        setShowRecentOnly(event.target.checked);
     };
 
     // Handle export button click
@@ -289,6 +331,11 @@ export const GuestListDialog = ({ open, handleClose }) => {
         event.stopPropagation();
     };
 
+    // Xác định tiêu đề dựa trên trạng thái hiển thị
+    const getDialogTitle = () => {
+        return showRecentOnly ? "Danh sách khách hàng mới thêm" : "Danh sách khách lưu trú";
+    };
+
     return (
         // Wrap with LocalizationProvider for date pickers
         <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={vi}>
@@ -322,7 +369,7 @@ export const GuestListDialog = ({ open, handleClose }) => {
                     onClick={preventClose}
                 >
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-                        Danh sách khách lưu trú
+                        {getDialogTitle()}
                     </Typography>
                     <Chip
                         icon={<HomeWorkIcon fontSize="small" />}
@@ -353,6 +400,29 @@ export const GuestListDialog = ({ open, handleClose }) => {
                         gap: 2,
                         overflowY: 'auto'
                     }}>
+                        {/* Toggle for Recent Customers */}
+                        <Box sx={{ mb: 1 }}>
+                            <FormControlLabel
+                                control={
+                                    <Switch 
+                                        checked={showRecentOnly}
+                                        onChange={handleToggleRecentOnly}
+                                        color="primary"
+                                    />
+                                }
+                                label={
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <NewReleasesIcon color="primary" sx={{ mr: 0.5, fontSize: 20 }} />
+                                        <Typography variant="body2" fontWeight="medium">
+                                            Chỉ hiển thị khách hàng mới
+                                        </Typography>
+                                    </Box>
+                                }
+                            />
+                        </Box>
+
+                        <Divider sx={{ my: 1 }}/>
+
                         <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>Tìm kiếm</Typography>
                         <TextField
                             label="Tên khách lưu trú"
@@ -368,6 +438,7 @@ export const GuestListDialog = ({ open, handleClose }) => {
                                 ),
                                 sx: { borderRadius: 2 }
                             }}
+                            disabled={showRecentOnly}
                         />
                         <TextField
                             label="Số phòng, đặt phòng"
@@ -383,6 +454,7 @@ export const GuestListDialog = ({ open, handleClose }) => {
                                 ),
                                 sx: { borderRadius: 2 }
                             }}
+                            disabled={showRecentOnly}
                         />
 
                         <Divider sx={{ my: 1 }}/>
@@ -400,6 +472,7 @@ export const GuestListDialog = ({ open, handleClose }) => {
                                 },
                                 openPickerButton: { size: 'small' }
                             }}
+                            disabled={showRecentOnly}
                         />
                         <DateTimePicker
                             label="Đến ngày"
@@ -413,6 +486,7 @@ export const GuestListDialog = ({ open, handleClose }) => {
                                 },
                                 openPickerButton: { size: 'small' }
                             }}
+                            disabled={showRecentOnly}
                         />
 
                         <Divider sx={{ my: 1 }}/>
@@ -430,6 +504,7 @@ export const GuestListDialog = ({ open, handleClose }) => {
                                 },
                                 openPickerButton: { size: 'small' }
                             }}
+                            disabled={showRecentOnly}
                         />
                         <DateTimePicker
                             label="Đến ngày"
@@ -443,6 +518,7 @@ export const GuestListDialog = ({ open, handleClose }) => {
                                 },
                                 openPickerButton: { size: 'small' }
                             }}
+                            disabled={showRecentOnly}
                         />
 
                         <Box sx={{ mt: 2 }}>
@@ -450,7 +526,7 @@ export const GuestListDialog = ({ open, handleClose }) => {
                                 variant="contained"
                                 color="primary"
                                 fullWidth
-                                onClick={fetchGuestRegistrations}
+                                onClick={showRecentOnly ? fetchRecentCustomers : fetchGuestRegistrations}
                                 sx={{
                                     borderRadius: 2,
                                     textTransform: 'none',
@@ -469,14 +545,16 @@ export const GuestListDialog = ({ open, handleClose }) => {
                     <Box sx={{ flexGrow: 1, p: 2, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                         {/* Action Buttons */}
                         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2, gap: 1 }}>
-                            <IconButton 
-                                size="small" 
-                                sx={{ border: '1px solid #e0e0e0', borderRadius: 2 }}
-                                onClick={handleRefresh}
-                                disabled={isLoading}
-                            >
-                                <RefreshIcon />
-                            </IconButton>
+                            <Tooltip title="Làm mới dữ liệu">
+                                <IconButton 
+                                    size="small" 
+                                    sx={{ border: '1px solid #e0e0e0', borderRadius: 2 }}
+                                    onClick={handleRefresh}
+                                    disabled={isLoading}
+                                >
+                                    <RefreshIcon />
+                                </IconButton>
+                            </Tooltip>
                             <Button
                                 variant="outlined"
                                 startIcon={<QrCodeScannerIcon />}
@@ -500,7 +578,7 @@ export const GuestListDialog = ({ open, handleClose }) => {
                                     },
                                 }}
                                 onClick={handleExport}
-                                disabled={isLoading}
+                                disabled={isLoading || showRecentOnly}
                             >
                                 Xuất file khai báo
                             </Button>
@@ -522,35 +600,61 @@ export const GuestListDialog = ({ open, handleClose }) => {
                                         <TableRow sx={{ '& th': { backgroundColor: '#e6f4ea', fontWeight: 'bold', color: '#155724' } }}>
                                             <TableCell>Họ và tên</TableCell>
                                             <TableCell>Thông tin</TableCell>
-                                            <TableCell>Đặt phòng</TableCell>
-                                            <TableCell>Phòng</TableCell>
-                                            <TableCell>Thời gian khai báo</TableCell>
-                                            <TableCell>Thời gian lưu trú</TableCell>
+                                            {!showRecentOnly && <TableCell>Đặt phòng</TableCell>}
+                                            {!showRecentOnly && <TableCell>Phòng</TableCell>}
+                                            <TableCell>Thời gian tạo</TableCell>
+                                            {!showRecentOnly && <TableCell>Thời gian lưu trú</TableCell>}
+                                            <TableCell>Liên hệ</TableCell>
                                             <TableCell align="center">Actions</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
                                         {guestList.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={7} align="center">
+                                                <TableCell colSpan={showRecentOnly ? 5 : 8} align="center">
                                                     <Typography variant="body2" sx={{ py: 2 }}>
-                                                        Không có dữ liệu khách lưu trú
+                                                        {showRecentOnly ? 'Không có dữ liệu khách hàng mới' : 'Không có dữ liệu khách lưu trú'}
                                                     </Typography>
                                                 </TableCell>
                                             </TableRow>
                                         ) : (
                                             guestList.map((guest) => (
-                                                <TableRow key={guest.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                                                <TableRow key={guest.id} sx={{ 
+                                                    '&:last-child td, &:last-child th': { border: 0 },
+                                                    ...(showRecentOnly && {
+                                                        backgroundColor: 'rgba(232, 245, 233, 0.2)', // Highlight new entries
+                                                        '&:hover': {
+                                                            backgroundColor: 'rgba(232, 245, 233, 0.4)',
+                                                        }
+                                                    })
+                                                }}>
                                                     <TableCell component="th" scope="row">
                                                         {guest.fullName}
+                                                        {showRecentOnly && new Date(guest.createdAt).getTime() > Date.now() - 3600000 && (
+                                                            <Chip 
+                                                                size="small" 
+                                                                label="Mới" 
+                                                                color="success" 
+                                                                variant="outlined" 
+                                                                sx={{ ml: 1, height: 20, fontSize: '0.7rem' }} 
+                                                            />
+                                                        )}
                                                     </TableCell>
                                                     <TableCell>
-                                                        {guest.gender} / {guest.birthDate ? new Date(guest.birthDate).getFullYear() : 'N/A'}
+                                                        {showRecentOnly 
+                                                            ? guest.gender 
+                                                            : `${guest.gender} / ${guest.birthDate ? new Date(guest.birthDate).getFullYear() : 'N/A'}`
+                                                        }
                                                     </TableCell>
-                                                    <TableCell>{guest.bookingCode || 'N/A'}</TableCell>
-                                                    <TableCell>{guest.roomNumber || 'N/A'}</TableCell>
+                                                    {!showRecentOnly && <TableCell>{guest.bookingCode || 'N/A'}</TableCell>}
+                                                    {!showRecentOnly && <TableCell>{guest.roomNumber || 'N/A'}</TableCell>}
                                                     <TableCell>{formatDateTime(guest.createdAt)}</TableCell>
-                                                    <TableCell>{formatDateRange(guest.checkInTime, guest.checkOutTime)}</TableCell>
+                                                    {!showRecentOnly && <TableCell>{formatDateRange(guest.checkInTime, guest.checkOutTime)}</TableCell>}
+                                                    <TableCell>
+                                                        {guest.phone || 'N/A'}
+                                                        {guest.email && <br />}
+                                                        {guest.email}
+                                                    </TableCell>
                                                     <TableCell align="center">
                                                         <IconButton 
                                                             size="small" 
@@ -577,10 +681,12 @@ export const GuestListDialog = ({ open, handleClose }) => {
 
                         {/* Footer Info */}
                         <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
-                            Tổng {guestList.length} khách lưu trú.{' '}
-                            <Link href="#" underline="hover">
-                                Xem hướng dẫn khai báo online.
-                            </Link>
+                            Tổng {guestList.length} {showRecentOnly ? 'khách hàng mới.' : 'khách lưu trú.'}{' '}
+                            {!showRecentOnly && (
+                                <Link href="#" underline="hover">
+                                    Xem hướng dẫn khai báo online.
+                                </Link>
+                            )}
                         </Typography>
                     </Box>
                 </DialogContent>

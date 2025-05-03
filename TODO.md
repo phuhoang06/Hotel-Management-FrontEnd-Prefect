@@ -13,6 +13,28 @@
   - Preserved responsive design
 
 ## Development Tasks 
+- [ ] Enhance "Khách lưu trú" functionality in InforApp component
+  - [x] Add dialog to display all available guests
+  - [x] Implement checkbox selection for multiple guests
+  - [x] Add confirmation button to apply selected guests
+  - [ ] Improve search and filtering capabilities for guest list
+  - [ ] Add pagination for large guest lists
+
+- [x] Implement Quick Room Booking functionality
+  - [x] Create QuickBookingDialog component with UI
+  - [x] Integrate with Room API to fetch available rooms
+  - [x] Implement room selection logic
+  - [x] Integrate with Customer API for customer information
+  - [x] Implement booking creation using CheckinService
+  - [x] Add validation for booking parameters
+  - [x] Calculate prices automatically based on room type and duration
+  - [x] Handle success and error states for booking process
+  - [x] Pass selected room data from Grid/List/Schematic views to QuickBookingDialog
+
+- [ ] Implement complete room status display
+  - [x] Update status logic according to documentation
+  - [x] Implement correct room status transitions
+  - [ ] Create consistent status visualization across all views
 
 ## Bug Fixes
 - [x] Fix "Khách lưu trú" click event in sidebar menu

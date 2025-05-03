@@ -14,6 +14,8 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import WarningIcon from '@mui/icons-material/Warning';
+import AlarmIcon from '@mui/icons-material/Alarm';
 import EditIcon from '@mui/icons-material/Edit';
 
 // Component for the Room Details Dialog (Occupied Room)
@@ -22,7 +24,8 @@ const RoomDetailsDialog = ({ open, onClose, roomData }) => {
     const defaultData = {
         roomNumber: 'P.202',
         roomType: 'Phòng 01 giường đôi cho 2 người',
-        status: 'Đang sử dụng',
+        status: 'IN_USE',
+        isClean: true,
         customerType: 'Khách lẻ',
         guestInfo: '0 người lớn, 0 trẻ em, 0 giấy tờ',
         bookingId: 'DP000002',
@@ -36,6 +39,26 @@ const RoomDetailsDialog = ({ open, onClose, roomData }) => {
     };
 
     const data = roomData || defaultData;
+
+    // Determine the status display
+    let statusIcon = <CheckCircleIcon fontSize="small" />;
+    let statusLabel = 'Đang sử dụng';
+    let statusColor = 'success';
+    
+    if (data.status === 'CHECKOUT_SOON') {
+        statusIcon = <AlarmIcon fontSize="small" />;
+        statusLabel = 'Sắp trả phòng';
+        statusColor = 'primary';
+    } else if (data.status === 'OVERDUE') {
+        statusIcon = <WarningIcon fontSize="small" />;
+        statusLabel = 'Quá hạn trả phòng';
+        statusColor = 'error';
+    }
+    
+    // Determine cleaning status display
+    const cleaningStatusIcon = data.isClean ? 
+        <CheckCircleIcon color="success" /> : 
+        <WarningIcon color="warning" />;
 
     return (
         <Dialog
@@ -63,14 +86,14 @@ const RoomDetailsDialog = ({ open, onClose, roomData }) => {
                             {data.roomType}
                         </Typography>
                         <Chip
-                            icon={<CheckCircleIcon fontSize="small" />}
-                            label={data.status}
-                            color="success"
+                            icon={statusIcon}
+                            label={statusLabel}
+                            color={statusColor}
                             size="small"
                             sx={{ borderRadius: 1 }}
                         />
                         <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
-                            <CheckCircleIcon color="success" />
+                            {cleaningStatusIcon}
                         </Box>
                     </Box>
 
@@ -138,7 +161,7 @@ const RoomDetailsDialog = ({ open, onClose, roomData }) => {
                         color="success"
                         sx={{ borderRadius: 1, textTransform: 'none' }}
                     >
-                        Trả phòng
+                        {data.status === 'IN_USE' ? 'Thanh toán' : 'Trả phòng'}
                     </Button>
                 </Box>
             </DialogContent>

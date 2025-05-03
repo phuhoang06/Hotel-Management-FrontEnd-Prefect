@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     Dialog,
     DialogContent,
@@ -17,7 +17,13 @@ import {
     OutlinedInput,
     Paper,
     Grid,
-    ButtonBase
+    ButtonBase,
+    Snackbar,
+    Alert,
+    CircularProgress,
+    List,
+    ListItem,
+    ListItemText
 } from '@mui/material';
 import {
     Search,
@@ -36,15 +42,25 @@ import {
     ChevronRight
 } from '@mui/icons-material';
 // Import BookingDialog directly from InforApp file
-import InforApp, { BookingDialog } from './InforApp'; 
+import { BookingDialog } from './InforApp'; 
 // Import date and time pickers
-import { LocalizationProvider, DatePicker, TimePicker } from '@mui/x-date-pickers';
+import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { vi as viLocale } from 'date-fns/locale';
 
-const QuickBookingDialog = ({ open, onClose }) => {
-    const [roomType, setRoomType] = useState("Phòng 01 giường đôi cho 2 người");
-    const [roomNumber, setRoomNumber] = useState("P.203");
+// Import services for API integration
+import checkinService from '../../../service/checkin.service';
+import roomService from '../../../service/room.service';
+// Guest service might not be needed directly here anymore
+// import guestService from '../../../service/guest.service';
+
+// GuestRegistrationForm is handled by BookingDialog now
+// import GuestRegistrationForm from './GuestRegistrationForm';
+
+const QuickBookingDialog = ({ open, onClose, initialRoomData = null }) => {
+    // Original state variables
+    const [roomType, setRoomType] = useState(initialRoomData?.roomCategory?.name || "Phòng 01 giường đôi cho 2 người");
+    const [roomNumber, setRoomNumber] = useState(initialRoomData?.roomNumber || "P.203");
     const [bookingType, setBookingType] = useState("Giờ");
     
     // Date and time picker states - khởi tạo trước để dùng cho format
@@ -72,10 +88,29 @@ const QuickBookingDialog = ({ open, onClose }) => {
     const [checkOutTime, setCheckOutTime] = useState(formatInitialDateTime(oneHourLater));
     
     const [duration, setDuration] = useState("1 giờ");
-    const [price, setPrice] = useState(180000);
+    const [price, setPrice] = useState(initialRoomData?.roomCategory?.hourlyPrice || 180000);
     const [saleChannel, setSaleChannel] = useState("");
     const [priceList, setPriceList] = useState("");
     const [note, setNote] = useState("");
+    
+    // API integration state variables
+    const [loading, setLoading] = useState(false);
+    const [roomsLoading, setRoomsLoading] = useState(false);
+    const [roomCategories, setRoomCategories] = useState([]);
+    const [availableRooms, setAvailableRooms] = useState([]);
+    const [selectedRoomCategory, setSelectedRoomCategory] = useState(null);
+    const [selectedRoom, setSelectedRoom] = useState(initialRoomData || null);
+    const [adultCount, setAdultCount] = useState(initialRoomData?.roomCategory?.standardAdultCapacity || 2);
+    const [childCount, setChildCount] = useState(initialRoomData?.roomCategory?.standardChildCapacity || 0);
+    const [customerId, setCustomerId] = useState(null);
+    const [selectedCustomer, setSelectedCustomer] = useState(null);
+    const [paidAmount, setPaidAmount] = useState(0);
+    const [calculatedPrice, setCalculatedPrice] = useState(price);
+    const [calculationLoading, setCalculationLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+    const [successMessage, setSuccessMessage] = useState("");
+    const [showAlert, setShowAlert] = useState(false);
+    
     const [inforDialogOpen, setInforDialogOpen] = useState(false); // State for BookingDialog
     
     // Date picker visibility
@@ -89,6 +124,178 @@ const QuickBookingDialog = ({ open, onClose }) => {
     const checkInTimePickerRef = useRef(null);
     const checkOutDatePickerRef = useRef(null);
     const checkOutTimePickerRef = useRef(null);
+    
+    // Fetch room categories and available rooms on component mount
+    useEffect(() => {
+        if (open && !initialRoomData) {
+            // Chỉ tải danh sách phòng nếu không có dữ liệu phòng ban đầu
+            fetchRoomCategories();
+        }
+    }, [open, initialRoomData]);
+    
+    // Effect to load initial room data when provided
+    useEffect(() => {
+        if (open && initialRoomData) {
+            console.log('Initial room data received:', initialRoomData);
+            console.log('Room ID:', initialRoomData.id);
+            
+            // Set room type from initial data
+            if (initialRoomData.roomCategory && initialRoomData.roomCategory.name) {
+                setRoomType(initialRoomData.roomCategory.name);
+                setSelectedRoomCategory(initialRoomData.roomCategory);
+            }
+            
+            // Set room number always as P.{ID} format
+            if (initialRoomData.id) {
+                const formattedRoomNumber = `P.${initialRoomData.id}`;
+                setRoomNumber(formattedRoomNumber);
+                // Also set this as roomNumber property on the initialRoomData for dropdown consistency
+                initialRoomData.roomNumber = formattedRoomNumber;
+            }
+            
+            // Set selected room
+            setSelectedRoom(initialRoomData);
+            
+            // Set adult and child count based on room category
+            if (initialRoomData.roomCategory) {
+                setAdultCount(initialRoomData.roomCategory.standardAdultCapacity || 2);
+                setChildCount(initialRoomData.roomCategory.standardChildCapacity || 0);
+            }
+            
+            // Set price based on room category and booking type
+            if (initialRoomData.roomCategory) {
+                const basePrice = bookingType === 'Giờ' 
+                    ? initialRoomData.roomCategory.hourlyPrice 
+                    : bookingType === 'Ngày' 
+                        ? initialRoomData.roomCategory.dailyPrice 
+                        : initialRoomData.roomCategory.overnightPrice;
+                
+                setPrice(basePrice || 0);
+                setCalculatedPrice(basePrice || 0);
+                
+                // Tạo danh sách phòng chỉ với phòng hiện tại để hiển thị trong dropdown
+                setAvailableRooms([initialRoomData]);
+            }
+        }
+    }, [open, initialRoomData, bookingType]);
+    
+    // Fetch room categories
+    const fetchRoomCategories = async () => {
+        try {
+            setLoading(true);
+            const response = await roomService.getRoomCategories({
+                status: 'ACTIVE',
+                size: 50
+            });
+            
+            if (response && response.content) {
+                setRoomCategories(response.content);
+                
+                // If initial room data is provided, set the selected room category
+                if (initialRoomData && initialRoomData.roomCategory) {
+                    const matchingCategory = response.content.find(
+                        cat => cat.id === initialRoomData.roomCategory.id
+                    );
+                    if (matchingCategory) {
+                        setSelectedRoomCategory(matchingCategory);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching room categories:', error);
+            setErrorMessage('Không thể tải danh sách loại phòng');
+            setShowAlert(true);
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    // Fetch available rooms based on current parameters
+    const fetchAvailableRooms = async () => {
+        const rentTypeMapping = {
+            'Giờ': 'HOURLY',
+            'Ngày': 'DAILY',
+            'Đêm': 'OVERNIGHT'
+        };
+        
+        try {
+            setRoomsLoading(true);
+            
+            // Prepare check-in time
+            const checkinDateTime = new Date(checkInDate);
+            checkinDateTime.setHours(
+                checkInTimeValue.getHours(),
+                checkInTimeValue.getMinutes()
+            );
+            
+            // Extract duration from duration state
+            const durationMatch = duration.match(/\d+/);
+            const durationValue = durationMatch ? parseInt(durationMatch[0], 10) : 1;
+            
+            // Prepare parameters for API call
+            const params = {
+                checkinTime: checkinDateTime.toISOString(),
+                rentType: rentTypeMapping[bookingType] || 'HOURLY',
+                duration: durationValue
+            };
+            
+            // Add categoryId if a category is selected
+            if (selectedRoomCategory && selectedRoomCategory.id) {
+                params.categoryId = selectedRoomCategory.id;
+            }
+            
+            const response = await roomService.getAvailableRooms(params);
+            
+            if (response && response.content) {
+                setAvailableRooms(response.content);
+                
+                // If we have available rooms and no room is selected yet, select the first one
+                if (response.content.length > 0 && !selectedRoom) {
+                    setSelectedRoom(response.content[0]);
+                    setRoomNumber(response.content[0].roomNumber || 'P.203');
+                }
+            } else {
+                setAvailableRooms([]);
+            }
+        } catch (error) {
+            console.error('Error fetching available rooms:', error);
+            setErrorMessage('Không thể tải danh sách phòng khả dụng');
+            setShowAlert(true);
+        } finally {
+            setRoomsLoading(false);
+        }
+    };
+    
+    // Simplified price calculation without API call
+    const recalculatePrice = () => {
+        if (!selectedRoomCategory) return;
+        
+        // Extract duration from duration state
+        const durationMatch = duration.match(/\d+/);
+        const durationValue = durationMatch ? parseInt(durationMatch[0], 10) : 1;
+        
+        // Get base price based on booking type
+        let basePrice = 0;
+        if (bookingType === 'Giờ') {
+            basePrice = selectedRoomCategory.hourlyPrice || 0;
+        } else if (bookingType === 'Ngày') {
+            basePrice = selectedRoomCategory.dailyPrice || 0;
+        } else if (bookingType === 'Đêm') {
+            basePrice = selectedRoomCategory.overnightPrice || 0;
+        }
+        
+        // Simple calculation: base price × duration
+        const calculatedAmount = basePrice * durationValue;
+        setCalculatedPrice(calculatedAmount);
+        setPrice(calculatedAmount);
+    };
+    
+    // Effect to recalculate price when relevant parameters change
+    useEffect(() => {
+        if (selectedRoomCategory && bookingType && duration) {
+            recalculatePrice();
+        }
+    }, [selectedRoomCategory, bookingType, duration, adultCount, childCount]);
     
     // Handle click outside
     useEffect(() => {
@@ -117,17 +324,59 @@ const QuickBookingDialog = ({ open, onClose }) => {
     }, [showCheckInDatePicker, showCheckInTimePicker, showCheckOutDatePicker, showCheckOutTimePicker]);
 
     const handleClose = () => {
+        // Reset form state
+        setRoomType(initialRoomData?.roomCategory?.name || "Phòng 01 giường đôi cho 2 người");
+        setRoomNumber(initialRoomData?.roomNumber || "P.203");
+        setBookingType("Giờ");
+        setCheckInDate(currentDate);
+        setCheckInTimeValue(currentDate);
+        setCheckOutDate(oneHourLater);
+        setCheckOutTimeValue(oneHourLater);
+        setCheckInTime(formatInitialDateTime(currentDate));
+        setCheckOutTime(formatInitialDateTime(oneHourLater));
+        setDuration("1 giờ");
+        setPrice(initialRoomData?.roomCategory?.hourlyPrice || 180000);
+        setSaleChannel("");
+        setPriceList("");
+        setNote("");
+        setCustomerId(null);
+        setSelectedCustomer(null);
+        setPaidAmount(0);
+        setCalculatedPrice(initialRoomData?.roomCategory?.hourlyPrice || 180000);
+        setErrorMessage("");
+        setSuccessMessage("");
+        setShowAlert(false);
+        
         if (onClose) onClose();
     };
 
-    // Function to handle opening the BookingDialog dialog
+    // Function to handle opening the BookingDialog
     const handleOpenInforDialog = () => {
         setInforDialogOpen(true);
+        console.log("Opening InforDialog to select representative customer");
     };
 
-    // Function to handle closing the BookingDialog dialog
+    // Function to handle closing the BookingDialog (data update is handled by callback)
     const handleCloseInforDialog = () => {
         setInforDialogOpen(false);
+        // No need to receive data here anymore
+    };
+    
+    // Callback function to update customer info from BookingDialog
+    const handleCustomerInfoUpdate = (customer, adults, children) => {
+        console.log("Received from BookingDialog:", { customer, adults, children });
+        if (customer && customer.id) {
+            setSelectedCustomer(customer);
+            setCustomerId(customer.id);
+        } else {
+             // Handle case where no customer is selected/returned
+             setSelectedCustomer(null);
+             setCustomerId(null);
+             console.warn("No valid customer selected from BookingDialog");
+        }
+        // Update adult/child counts regardless of customer selection
+        setAdultCount(adults ?? (initialRoomData?.roomCategory?.standardAdultCapacity || 1)); // Provide default
+        setChildCount(children ?? (initialRoomData?.roomCategory?.standardChildCapacity || 0)); // Provide default
     };
     
     // Functions to handle date and time changes
@@ -473,139 +722,327 @@ const QuickBookingDialog = ({ open, onClose }) => {
         );
     };
 
+    // Handle room booking using walk-in endpoint
+    const handleRoomBooking = async (isCheckIn = false) => {
+        // Validate required data
+        if (!selectedRoom || !selectedRoom.id) {
+            setErrorMessage('Vui lòng chọn phòng');
+            setShowAlert(true);
+            return;
+        }
+        
+        if (!customerId) {
+            setErrorMessage('Vui lòng chọn khách hàng hoặc thêm khách mới');
+            setShowAlert(true);
+            return;
+        }
+        
+        const rentTypeMapping = {
+            'Giờ': 'HOURLY',
+            'Ngày': 'DAILY',
+            'Đêm': 'OVERNIGHT'
+        };
+        
+        try {
+            setLoading(true);
+            setErrorMessage('');
+            setSuccessMessage('');
+            
+            // Prepare check-in time
+            const checkinDateTime = new Date(checkInDate);
+            checkinDateTime.setHours(
+                checkInTimeValue.getHours(),
+                checkInTimeValue.getMinutes()
+            );
+            
+            // Validate check-in time (cannot be in the past)
+            if (checkinDateTime < new Date()) {
+                setErrorMessage('Thời gian nhận phòng không được trong quá khứ.');
+                setShowAlert(true);
+                setLoading(false);
+                return;
+            }
+            
+            // Extract duration from duration state
+            const durationMatch = duration.match(/\d+/);
+            const durationValue = durationMatch ? parseInt(durationMatch[0], 10) : 1;
+            
+            // Create booking request payload (WalkInRequestDTO)
+            const walkInRequest = {
+                customerId: customerId,
+                note: note,
+                paidAmount: paidAmount,
+                rooms: [
+                    {
+                        roomId: selectedRoom.id,
+                        checkinTime: checkinDateTime.toISOString(),
+                        adultCount: adultCount,
+                        childCount: childCount,
+                        rentType: rentTypeMapping[bookingType] || 'HOURLY',
+                        duration: durationValue
+                    }
+                ]
+            };
+            
+            console.log("Sending Walk-in Request:", walkInRequest);
+            
+            // Call API to create walk-in booking
+            const response = await checkinService.createWalkInBooking(walkInRequest);
+            
+            console.log("Walk-in Response:", response);
+            
+            if (response && response.booking && response.booking.bookingId) {
+                setSuccessMessage(isCheckIn ? 'Nhận phòng thành công!' : 'Đặt phòng thành công!');
+                setShowAlert(true);
+                
+                // Close dialog after delay, passing booking data
+                setTimeout(() => {
+                    if (onClose) onClose(response.booking); // Pass the full booking object
+                }, 1500);
+            } else {
+                // Handle cases where response might not be as expected
+                throw new Error(response?.status || 'Không nhận được phản hồi đặt phòng hợp lệ từ máy chủ');
+            }
+        } catch (error) {
+            console.error('Error creating walk-in booking:', error);
+            // Extract meaningful error message from Axios error or default
+            const apiErrorMessage = error.response?.data?.status || error.response?.data?.message || error.message;
+            setErrorMessage(apiErrorMessage || 'Đã xảy ra lỗi khi tạo đặt phòng');
+            setShowAlert(true);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Function to set check-in time to current system time
+    const handleSetCurrentTime = () => {
+        const now = new Date();
+        
+        // Set check-in time to current time
+        setCheckInDate(now);
+        setCheckInTimeValue(now);
+        updateCheckInTime(now, now);
+        
+        // Set check-out time to current time + 1 hour
+        const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+        setCheckOutDate(oneHourLater);
+        setCheckOutTimeValue(oneHourLater);
+        updateCheckOutTime(oneHourLater, oneHourLater);
+        
+        // Update duration calculation
+        updateDuration(now, now, oneHourLater, oneHourLater);
+        
+        console.log("Set check-in time to current system time:", now);
+        console.log("Set check-out time to one hour later:", oneHourLater);
+    };
+
     return (
         // Changed maxWidth to "xl" for a wider dialog
         <Dialog open={Boolean(open)} onClose={handleClose} maxWidth="xl" fullWidth>
             {/* Header */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 3, py: 2, borderBottom: '1px solid #e0e0e0' }}>
-                <Typography variant="h6" sx={{ fontWeight: 500, fontSize: '1.1rem' }}>Đặt/Nhận phòng nhanh</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 500, fontSize: '1.1rem' }}>
+                    Đặt/Nhận phòng nhanh - P.{selectedRoom?.id || ''} 
+                    {selectedRoom?.roomCategory?.name && ` (${selectedRoom.roomCategory.name})`}
+                </Typography>
                 <IconButton onClick={handleClose} size="small"><Close /></IconButton>
             </Box>
 
             <DialogContent sx={{ p: 4 }}>
-                {/* Search + Controls + Summary - Adjusted Summary style */}
-                <Box display="flex" alignItems="center" mb={4} flexWrap="wrap"> {/* Added flexWrap for smaller screens */}
-                    <TextField
-                        // Reduced flexGrow to allow other items space, or set a fixed width if preferred
-                        sx={{ flexGrow: 1, mr: { xs: 0, sm: 2 }, mb: { xs: 2, sm: 0 }, backgroundColor: '#f5f5f5', borderRadius: '8px', '.MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' } }} // Added border color transparent and responsive margin bottom
-                        placeholder="Nhập mã, Tên, SĐT khách hàng"
-                        variant="outlined"
-                        size="small" // Changed size to small for a slightly smaller input
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <Search sx={{ fontSize: 20, color: '#555' }} /> {/* Adjusted icon size */}
-                                </InputAdornment>
-                            )
-                        }}
-                    />
-                    {/* Compact Summary Section - Styled to match the new image */}
-                    <Box
+                {/* Customer Info Display Area */}
+                <Box sx={{ mb: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: '8px', backgroundColor: '#f9f9f9' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 'medium', mb: 1 }}>
+                        Thông tin khách đại diện:
+                    </Typography>
+                    {selectedCustomer ? (
+                        <Grid container spacing={1}>
+                            <Grid item xs={12}>
+                                <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#00695c' }}>
+                                    {selectedCustomer.fullName || 'Không có tên'}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant="caption" display="block" sx={{ color: 'text.secondary', lineHeight: 1.5 }}>
+                                    <strong>SĐT:</strong> {selectedCustomer.phone || '-'}
+                                </Typography>
+                                <Typography variant="caption" display="block" sx={{ color: 'text.secondary', lineHeight: 1.5 }}>
+                                    <strong>Email:</strong> {selectedCustomer.email || '-'}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant="caption" display="block" sx={{ color: 'text.secondary', lineHeight: 1.5 }}>
+                                    <strong>CCCD/Hộ chiếu:</strong> {selectedCustomer.idCard || '-'}
+                                </Typography>
+                                <Typography variant="caption" display="block" sx={{ color: 'text.secondary', lineHeight: 1.5 }}>
+                                    <strong>Quốc tịch:</strong> {selectedCustomer.nationality || 'Việt Nam'}
+                                </Typography>
+                            </Grid>
+                        </Grid>
+                    ) : (
+                        <Box sx={{ textAlign: 'center', py: 1 }}>
+                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                Chưa chọn khách hàng
+                            </Typography>
+                            <Button 
+                                variant="text" 
+                                onClick={handleOpenInforDialog}
+                                sx={{ 
+                                    color: '#00695c', 
+                                    textTransform: 'none', 
+                                    mt: 1,
+                                    fontSize: '0.85rem'
+                                }}
+                            >
+                                Nhấn vào đây để chọn khách đại diện
+                            </Button>
+                        </Box>
+                    )}
+                </Box>
+
+                {/* Controls + Summary */} 
+                <Box display="flex" alignItems="center" mb={4} flexWrap="wrap"> 
+                    {/* Compact Summary Section - Now opens BookingDialog */} 
+                    <Box 
                         display="flex"
                         alignItems="center"
-                        gap={1.5} // Space between icon-number groups
-                        ml={{ xs: 0, sm: 3 }} // Margin left, responsive
-                        mt={{ xs: 2, sm: 0 }} // Margin top, responsive
-                        px={1.5} // Horizontal padding inside the box
-                        py={0.5} // Vertical padding inside the box
-                        border="1px solid #ccc" // Border color
-                        borderRadius="20px" // Rounded corners (pill shape)
+                        gap={1.5}
+                        ml={{ xs: 0, sm: 3 }}
+                        mt={{ xs: 2, sm: 0 }}
+                        px={1.5}
+                        py={0.5}
+                        border="1px solid #ccc"
+                        borderRadius="20px"
                         sx={{ 
                             flexShrink: 0,
-                            cursor: 'pointer', // Add pointer cursor to indicate it's clickable
+                            cursor: 'pointer',
                             '&:hover': { 
-                                backgroundColor: '#f5f5f5',  // Light background on hover
-                                borderColor: '#999'  // Darker border on hover
+                                backgroundColor: '#f5f5f5', 
+                                borderColor: '#999' 
                             }
-                        }} // Prevent shrinking and add hover effect
-                        onClick={handleOpenInforDialog} // Add onClick handler to open BookingDialog
+                        }}
+                        onClick={handleOpenInforDialog}
                     >
-                        {/* Số người */}
-                        <Box display="flex" alignItems="center" gap={0.5}>
-                            <People sx={{ color: 'gray', fontSize: 20 }} /> {/* Icon */}
-                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>2</Typography> {/* Number */}
+                        {/* Số người */} 
+                        <Box display="flex" alignItems="center" gap={0.5}> 
+                            <People sx={{ color: 'gray', fontSize: 20 }} /> 
+                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>{adultCount}</Typography> 
+                        </Box> 
+                        <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} /> 
+                        {/* Số trẻ em (Use Hotel icon as per previous code, though confusing) */} 
+                        <Box display="flex" alignItems="center" gap={0.5}> 
+                            <Hotel sx={{ color: 'gray', fontSize: 20 }} /> 
+                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>{childCount}</Typography> 
                         </Box>
-                        <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} /> {/* Vertical separator */}
+                        <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} /> 
+                        {/* Số phòng (Hardcoded 1 for now) */} 
+                        <Box display="flex" alignItems="center" gap={0.5}> 
+                            <Room sx={{ color: 'gray', fontSize: 20 }} /> 
+                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>1</Typography> 
+                        </Box> 
+                    </Box> 
+                    {/* End Compact Summary Section */} 
 
-                        {/* Số khách */}
-                        <Box display="flex" alignItems="center" gap={0.5}>
-                            <Hotel sx={{ color: 'gray', fontSize: 20 }} /> {/* Icon */}
-                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>1</Typography> {/* Number */}
-                        </Box>
-                        <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} /> {/* Vertical separator */}
-
-                        {/* Số phòng */}
-                        <Box display="flex" alignItems="center" gap={0.5}>
-                            <Room sx={{ color: 'gray', fontSize: 20 }} /> {/* Icon */}
-                            <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>1</Typography> {/* Number */}
-                        </Box>
-                    </Box>
-                    {/* End Compact Summary Section */}
-
-                    {/* Original Controls (Walk icon, Sale Channel, Price List) - Adjusted layout */}
-                    <Box display="flex" alignItems="center" gap={2} ml={3}> {/* Adjusted ml and gap */}
-                        <IconButton size="small" sx={{ p: 0.5 }}><DirectionsWalk sx={{ fontSize: 20 }} /></IconButton> {/* Adjusted padding and icon size */}
-                        <FormControl size="small" sx={{ minWidth: 120 }}> {/* Adjusted minWidth */}
-                            <InputLabel id="sale-channel-label" sx={{ fontSize: '0.85rem' }}>Mã kênh bán</InputLabel> {/* Adjusted font size */}
+                    {/* Original Controls (Walk icon, Sale Channel, Price List) */} 
+                    <Box display="flex" alignItems="center" gap={2} ml={3}> 
+                        <IconButton size="small" sx={{ p: 0.5 }}><DirectionsWalk sx={{ fontSize: 20 }} /></IconButton>
+                        <FormControl size="small" sx={{ minWidth: 120 }}>
+                            <InputLabel id="sale-channel-label" sx={{ fontSize: '0.85rem' }}>Mã kênh bán</InputLabel>
                             <Select
                                 labelId="sale-channel-label"
                                 value={saleChannel}
                                 label="Mã kênh bán"
                                 onChange={e => setSaleChannel(e.target.value)}
-                                sx={{ height: '38px', fontSize: '0.85rem' }} // Adjusted height and font size
+                                sx={{ height: '38px', fontSize: '0.85rem' }}
                             >
                                 <MenuItem value="">Mã kênh bán</MenuItem>
                             </Select>
                         </FormControl>
-                        <FormControl size="small" sx={{ minWidth: 140 }}> {/* Adjusted minWidth */}
-                            <InputLabel id="price-list-label" sx={{ fontSize: '0.85rem' }}>Bảng giá chung</InputLabel> {/* Adjusted font size */}
+                        <FormControl size="small" sx={{ minWidth: 140 }}>
+                            <InputLabel id="price-list-label" sx={{ fontSize: '0.85rem' }}>Bảng giá chung</InputLabel>
                             <Select
                                 labelId="price-list-label"
                                 value={priceList}
                                 label="Bảng giá chung"
                                 onChange={e => setPriceList(e.target.value)}
-                                sx={{ height: '38px', fontSize: '0.85rem' }} // Adjusted height and font size
+                                sx={{ height: '38px', fontSize: '0.85rem' }}
                             >
                                 <MenuItem value="">Bảng giá chung</MenuItem>
                             </Select>
                         </FormControl>
                     </Box>
-                    {/* End Original Controls */}
                 </Box>
 
                 {/* Wrap entire content with LocalizationProvider */}
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={viLocale}>
                     {/* Room Information Section - Adjusted for alignment and spacing */}
-                    {/* Removed overflowX: 'auto' */}
-                    <Paper elevation={0} sx={{ p: 2, mb: 4, backgroundColor: '#f7fcf7', border: '1px solid #e8f5e9', borderRadius: '8px' }}> {/* Adjusted elevation, padding, background, border, and added border radius */}
+                    <Paper elevation={0} sx={{ p: 2, mb: 4, backgroundColor: '#f7fcf7', border: '1px solid #e8f5e9', borderRadius: '8px' }}>
                         {/* Header Row - Using flex properties for column distribution */}
-                        {/* Added gap for horizontal spacing between columns */}
                         <Box sx={{ display: 'flex', mb: 2, backgroundColor: '#e8f5e9', p: '10px', borderRadius: '8px', alignItems: 'center', gap: 2 }}>
                             {/* Column Headers - Using flex properties */}
-                            {/* flex: flex-grow flex-shrink flex-basis */}
-                            <Box sx={{ flex: '2 0 0', flexShrink: 0 }}> {/* Hạng phòng - flex-grow 2, can't shrink, basis 0 */}
+                            <Box sx={{ flex: '2 0 0', flexShrink: 0 }}>
                                 <Typography sx={{ fontWeight: 'bold', fontSize: '0.8rem', color: '#2e7d32' }}>Hạng phòng</Typography>
                             </Box>
-                            <Box sx={{ flex: '1 0 0', flexShrink: 0 }}> {/* Phòng - flex-grow 1, can't shrink, basis 0 */}
+                            <Box sx={{ flex: '1 0 0', flexShrink: 0 }}>
                                 <Typography sx={{ fontWeight: 'bold', fontSize: '0.8rem', color: '#2e7d32', display: 'flex', alignItems: 'center' }}>
                                     Phòng
                                     <Box component="span" sx={{ bgcolor: 'green', color: 'white', borderRadius: '50%', px: 0.7, py: 0.1, ml: 0.5, fontSize: '0.65rem', height: '18px', width: '18px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'normal' }}>1</Box>
                                 </Typography>
                             </Box>
-                            <Box sx={{ flex: '1 0 0', flexShrink: 0 }}> {/* Hình thức - flex-grow 1, can't shrink, basis 0 */}
+                            <Box sx={{ flex: '1 0 0', flexShrink: 0 }}>
                                 <Typography sx={{ fontWeight: 'bold', fontSize: '0.8rem', color: '#2e7d32' }}>Hình thức</Typography>
                             </Box>
-                            <Box sx={{ flex: '2 0 0', flexShrink: 0, display: 'flex', alignItems: 'center' }}> {/* Nhận - flex-grow 2, can't shrink, basis 0 */}
+                            <Box sx={{ flex: '2 0 0', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
                                 <Typography sx={{ fontWeight: 'bold', fontSize: '0.8rem', color: '#2e7d32', mr: 1 }}>Nhận</Typography>
-                                <Box sx={{ display: 'flex', gap: 1 }}> {/* Badges */}
-                                    <Box sx={{ bgcolor: '#1976d2', color: 'white', borderRadius: '16px', px: 1, py: 0.3, fontSize: '0.7rem', height: '20px', display: 'flex', alignItems: 'center', fontWeight: 'medium' }}>HIỆN TẠI</Box>
-                                    <Box sx={{ border: '1px solid #2e7d32', color: '#2e7d32', borderRadius: '16px', px: 1, py: 0.3, fontSize: '0.7rem', height: '20px', display: 'flex', alignItems: 'center', fontWeight: 'medium' }}>QUY ĐỊNH</Box>
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                    <Box 
+                                        sx={{ 
+                                            bgcolor: '#1976d2', 
+                                            color: 'white', 
+                                            borderRadius: '16px', 
+                                            px: 1, 
+                                            py: 0.3, 
+                                            fontSize: '0.7rem', 
+                                            height: '20px', 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            fontWeight: 'medium',
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                                bgcolor: '#0d5eaf',
+                                                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                                            }
+                                        }}
+                                        onClick={handleSetCurrentTime}
+                                    >
+                                        HIỆN TẠI
+                                    </Box>
+                                    <Box 
+                                        sx={{ 
+                                            border: '1px solid #2e7d32', 
+                                            color: '#2e7d32', 
+                                            borderRadius: '16px', 
+                                            px: 1, 
+                                            py: 0.3, 
+                                            fontSize: '0.7rem', 
+                                            height: '20px', 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            fontWeight: 'medium',
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                                bgcolor: 'rgba(46, 125, 50, 0.04)',
+                                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                            }
+                                        }}
+                                    >
+                                        QUY ĐỊNH
+                                    </Box>
                                 </Box>
                             </Box>
-                            <Box sx={{ flex: '1.5 0 0', flexShrink: 0 }}> {/* Trả phòng - flex-grow 1.5, can't shrink, basis 0 */}
+                            <Box sx={{ flex: '1.5 0 0', flexShrink: 0 }}>
                                 <Typography sx={{ fontWeight: 'bold', fontSize: '0.8rem', color: '#2e7d32' }}>Trả phòng</Typography>
                             </Box>
-                            <Box sx={{ flex: '1 0 0', flexShrink: 0, textAlign: 'center' }}> {/* Dự kiến - flex-grow 1, can't shrink, basis 0, center text */}
+                            <Box sx={{ flex: '1 0 0', flexShrink: 0, textAlign: 'center' }}>
                                 <Typography sx={{ fontWeight: 'bold', fontSize: '0.8rem', color: '#2e7d32' }}>Dự kiến</Typography>
                             </Box>
                             <Box sx={{ flex: '1.5 0 0', flexShrink: 0, display: 'flex', alignItems: 'center' }}> {/* Thành tiền */}
@@ -621,24 +1058,107 @@ const QuickBookingDialog = ({ open, onClose }) => {
                             {/* Hạng phòng */}
                             {/* Use flex basis corresponding to header, added right padding */}
                             <Box sx={{ flex: '2 0 0', flexShrink: 0, pr: 1 }}>
-                                <Typography variant="body2" sx={{ whiteSpace: 'pre-line', fontSize: '0.85rem', color: 'rgba(0,0,0,0.85)' }}>
-                                    {roomType.replace(' cho ', '\ncho ')}
-                                </Typography>
+                                <FormControl fullWidth size="small">
+                                    <Select 
+                                        value={roomType} 
+                                        onChange={(e) => {
+                                            setRoomType(e.target.value);
+                                            const selectedCategory = roomCategories.find(cat => cat.name === e.target.value);
+                                            if (selectedCategory) {
+                                                setSelectedRoomCategory(selectedCategory);
+                                                fetchAvailableRooms();
+                                            }
+                                        }}
+                                        sx={{ height: '38px', borderRadius: '8px', fontSize: '0.85rem' }}
+                                        disabled={loading || roomsLoading}
+                                    >
+                                        {roomCategories.map((category) => (
+                                            <MenuItem key={category.id} value={category.name}>
+                                                {category.name}
+                                            </MenuItem>
+                                        ))}
+                                        {roomCategories.length === 0 && (
+                                            <MenuItem value={roomType}>{roomType}</MenuItem>
+                                        )}
+                                    </Select>
+                                </FormControl>
                             </Box>
                             {/* Phòng - Use flex properties for flexibility */}
                             <Box sx={{ flex: '1 1 0', flexShrink: 0 }}> {/* flex-grow 1, can shrink, basis 0 */}
                                 <FormControl fullWidth size="small">
-                                    <Select value={roomNumber} onChange={e => setRoomNumber(e.target.value)} sx={{ height: '38px', borderRadius: '8px', fontSize: '0.85rem' }}>
-                                        <MenuItem value="P.203">P.203</MenuItem>
-                                        <MenuItem value="P.204">P.204</MenuItem>
-                                        <MenuItem value="P.205">P.205</MenuItem>
+                                    <Select 
+                                        value={roomNumber} 
+                                        onChange={(e) => {
+                                            setRoomNumber(e.target.value);
+                                            const roomId = e.target.value.replace('P.', '');
+                                            const selected = availableRooms.find(room => room.id.toString() === roomId);
+                                            if (selected) {
+                                                setSelectedRoom(selected);
+                                                console.log("Selected room ID:", selected.id);
+                                            }
+                                        }}
+                                        sx={{ height: '38px', borderRadius: '8px', fontSize: '0.85rem' }}
+                                        disabled={loading || roomsLoading}
+                                        displayEmpty
+                                        renderValue={(selected) => {
+                                            return selected || (selectedRoom ? `P.${selectedRoom.id}` : 'Chọn phòng');
+                                        }}
+                                    >
+                                        {availableRooms.map((room) => (
+                                            <MenuItem key={room.id} value={`P.${room.id}`}>
+                                                P.{room.id}
+                                            </MenuItem>
+                                        ))}
+                                        {availableRooms.length === 0 && (
+                                            <MenuItem value={roomNumber}>{roomNumber}</MenuItem>
+                                        )}
                                     </Select>
                                 </FormControl>
+                                {roomsLoading && (
+                                    <CircularProgress 
+                                        size={16} 
+                                        sx={{ 
+                                            position: 'absolute', 
+                                            right: '30px', 
+                                            top: '50%', 
+                                            marginTop: '-8px' 
+                                        }} 
+                                    />
+                                )}
                             </Box>
                             {/* Hình thức - Use flex properties for flexibility */}
                             <Box sx={{ flex: '1 1 0', flexShrink: 0 }}> {/* flex-grow 1, can shrink, basis 0 */}
                                 <FormControl fullWidth size="small">
-                                    <Select value={bookingType} onChange={e => setBookingType(e.target.value)} sx={{ height: '38px', borderRadius: '8px', fontSize: '0.85rem' }}>
+                                    <Select 
+                                        value={bookingType} 
+                                        onChange={(e) => {
+                                            setBookingType(e.target.value);
+                                            // Update duration based on booking type
+                                            if (e.target.value === 'Giờ') {
+                                                setDuration('1 giờ');
+                                            } else if (e.target.value === 'Ngày') {
+                                                setDuration('1 ngày');
+                                            } else if (e.target.value === 'Đêm') {
+                                                setDuration('1 đêm');
+                                            }
+                                            
+                                            // Recalculate price immediately for better UX
+                                            if (selectedRoomCategory) {
+                                                let basePrice = 0;
+                                                if (e.target.value === 'Giờ') {
+                                                    basePrice = selectedRoomCategory.hourlyPrice || 0;
+                                                } else if (e.target.value === 'Ngày') {
+                                                    basePrice = selectedRoomCategory.dailyPrice || 0;
+                                                } else if (e.target.value === 'Đêm') {
+                                                    basePrice = selectedRoomCategory.overnightPrice || 0;
+                                                }
+                                                setPrice(basePrice);
+                                                setCalculatedPrice(basePrice);
+                                            }
+                                        }}
+                                        sx={{ height: '38px', borderRadius: '8px', fontSize: '0.85rem' }}
+                                        disabled={loading}
+                                    >
                                         <MenuItem value="Giờ">Giờ</MenuItem>
                                         <MenuItem value="Ngày">Ngày</MenuItem>
                                         <MenuItem value="Đêm">Đêm</MenuItem>
@@ -830,7 +1350,9 @@ const QuickBookingDialog = ({ open, onClose }) => {
                 <Paper elevation={2} sx={{ p: 3, mb: 4, backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
                         <Typography variant="body1" sx={{ fontSize: '0.9rem' }}>Khách cần trả</Typography> {/* Adjusted font size */}
-                        <Typography color="green" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>{price.toLocaleString()} VNĐ</Typography> {/* Added currency */}
+                        <Typography color="green" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
+                            {price.toLocaleString()} VNĐ
+                        </Typography> {/* Added currency */}
                     </Box>
                     <Divider />
                     <Box display="flex" justifyContent="space-between" alignItems="center" py={1}>
@@ -838,20 +1360,111 @@ const QuickBookingDialog = ({ open, onClose }) => {
                             <Typography variant="body1" sx={{ fontSize: '0.9rem' }}>Khách thanh toán</Typography> {/* Adjusted font size */}
                             <CreditCard fontSize="small" sx={{ ml: 1, color: 'green' }} /> {/* Adjusted icon size */}
                         </Box>
-                        <Typography variant="body1" sx={{ fontSize: '0.9rem' }}>0 VNĐ</Typography> {/* Adjusted font size and added currency */}
+                        <TextField
+                            value={paidAmount}
+                            onChange={(e) => {
+                                // Only allow numbers
+                                const value = e.target.value.replace(/[^0-9]/g, '');
+                                setPaidAmount(parseInt(value || 0, 10));
+                            }}
+                            size="small"
+                            sx={{ 
+                                width: '150px', 
+                                '& input': { textAlign: 'right', fontSize: '0.9rem' }
+                            }}
+                            InputProps={{
+                                endAdornment: <InputAdornment position="end">VNĐ</InputAdornment>,
+                            }}
+                        />
                     </Box>
                 </Paper>
             </DialogContent>
 
             {/* Footer Actions */}
             <DialogActions sx={{ px: 4, pb: 4, justifyContent: 'flex-end', gap: 2 }}> {/* Adjusted gap */}
-                <Button variant="outlined" sx={{ textTransform: 'none', minWidth: '120px', borderRadius: '16px', fontSize: '0.9rem' }}>Thêm tùy chọn</Button> {/* Adjusted minWidth and font size */}
-                <Button variant="contained" color="success" sx={{ textTransform: 'none', minWidth: '120px', borderRadius: '16px', fontSize: '0.9rem' }}>Nhận phòng</Button> {/* Adjusted minWidth and font size */}
-                <Button variant="contained" sx={{ bgcolor: 'orange', '&:hover': { bgcolor: '#e65100' }, textTransform: 'none', minWidth: '120px', borderRadius: '16px', fontSize: '0.9rem' }}>Đặt trước</Button> {/* Adjusted minWidth and font size */}
+                <Button 
+                    variant="outlined" 
+                    sx={{ textTransform: 'none', minWidth: '120px', borderRadius: '16px', fontSize: '0.9rem' }}
+                    onClick={handleClose}
+                    disabled={loading}
+                >
+                    Hủy
+                </Button>
+                <Button 
+                    variant="contained" 
+                    color="success" 
+                    sx={{ textTransform: 'none', minWidth: '120px', borderRadius: '16px', fontSize: '0.9rem' }}
+                    onClick={() => handleRoomBooking(true)}
+                    disabled={loading}
+                >
+                    {loading ? <CircularProgress size={24} color="inherit" /> : 'Nhận phòng'}
+                </Button>
+                <Button 
+                    variant="contained" 
+                    sx={{ 
+                        bgcolor: 'orange', 
+                        '&:hover': { bgcolor: '#e65100' }, 
+                        textTransform: 'none', 
+                        minWidth: '120px', 
+                        borderRadius: '16px', 
+                        fontSize: '0.9rem' 
+                    }}
+                    onClick={() => handleRoomBooking(false)}
+                    disabled={loading}
+                >
+                    {loading ? <CircularProgress size={24} color="inherit" /> : 'Đặt trước'}
+                </Button>
             </DialogActions>
             
             {/* BookingDialog Dialog */}
-            {inforDialogOpen && <BookingDialog open={inforDialogOpen} handleClose={handleCloseInforDialog} />}
+            {inforDialogOpen && <BookingDialog 
+                open={inforDialogOpen} 
+                handleClose={handleCloseInforDialog} 
+                onUpdateCustomerInfo={handleCustomerInfoUpdate}
+            />}
+            
+            {/* Alert notifications */}
+            <Snackbar 
+                open={showAlert && errorMessage} 
+                autoHideDuration={6000} 
+                onClose={() => {
+                    setShowAlert(false);
+                    setErrorMessage('');
+                }}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert 
+                    onClose={() => {
+                        setShowAlert(false);
+                        setErrorMessage('');
+                    }} 
+                    severity="error" 
+                    sx={{ width: '100%' }}
+                >
+                    {errorMessage}
+                </Alert>
+            </Snackbar>
+            
+            <Snackbar 
+                open={showAlert && successMessage} 
+                autoHideDuration={3000} 
+                onClose={() => {
+                    setShowAlert(false);
+                    setSuccessMessage('');
+                }}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert 
+                    onClose={() => {
+                        setShowAlert(false);
+                        setSuccessMessage('');
+                    }} 
+                    severity="success" 
+                    sx={{ width: '100%' }}
+                >
+                    {successMessage}
+                </Alert>
+            </Snackbar>
         </Dialog>
     );
 };
