@@ -1,5 +1,4 @@
 import * as React from 'react';
-import PropTypes from 'prop-types';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Box from '@mui/material/Box';
@@ -24,6 +23,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
 import { toast } from 'react-toastify';
 import RoomViewService from "../../../service/admin/room.service";
+
+const placeholderImage = 'https://via.placeholder.com/200x150?text=No+Image';
 
 function a11yProps(index) {
     return {
@@ -53,12 +54,6 @@ function CustomTabPanel(props) {
     );
 }
 
-CustomTabPanel.propTypes = {
-    children: PropTypes.node,
-    index: PropTypes.number.isRequired,
-    value: PropTypes.number.isRequired,
-};
-
 export default function RoomTabs() {
     const [value, setValue] = React.useState(0);
     const [searchCategory, setSearchCategory] = React.useState('');
@@ -79,9 +74,7 @@ export default function RoomTabs() {
     const [totalCategories, setTotalCategories] = React.useState(0);
     const [pageRooms, setPageRooms] = React.useState(0);
     const [totalRooms, setTotalRooms] = React.useState(0);
-
-    // Định nghĩa placeholder image
-    const placeholderImage = '';
+    const [mainImage, setMainImage] = React.useState(null);
 
     const filteredCategories = React.useCallback(async (currentPage = 0) => {
         try {
@@ -210,48 +203,55 @@ export default function RoomTabs() {
         setExpandedRoomRow(null);
         setExpandedRoomDetails(null);
         setSelectedCategories([]);
+        setMainImage(null);
     };
 
     const handleRowClick = async (category) => {
         if (expandedRow === category.id) {
-            setExpandedRow(structuredClone(null));
-            setExpandedRowDetails(structuredClone(null));
+            setExpandedRow(null);
+            setExpandedRowDetails(null);
         } else {
-            setExpandedRow(structuredClone(category.id));
+            setExpandedRow(category.id);
             try {
                 setLoading(true);
                 const response = await RoomViewService.getRoomCategoryById(category.id);
-                setExpandedRowDetails(structuredClone(response?.data || null));
+                setExpandedRowDetails(response?.data || null);
             } catch (err) {
                 console.error('Lỗi khi tải thông tin chi tiết hạng phòng:', err);
-                setExpandedRowDetails(structuredClone(null));
+                setExpandedRowDetails(null);
                 toast.error(`Không thể tải thông tin chi tiết hạng phòng: ${err.message}`);
             } finally {
                 setLoading(false);
-                console.log(expandedRowDetails);
             }
         }
     };
 
     const handleRoomRowClick = async (room) => {
         if (expandedRoomRow === room.id) {
-            setExpandedRoomRow(structuredClone(null));
-            setExpandedRoomDetails(structuredClone(null));
+            setExpandedRoomRow(null);
+            setExpandedRoomDetails(null);
+            setMainImage(null);
         } else {
-            setExpandedRoomRow(structuredClone(room.id));
+            setExpandedRoomRow(room.id);
             try {
                 setLoading(true);
                 const response = await RoomViewService.getRoomById(room.id);
-                setExpandedRoomDetails(structuredClone(response?.data || room));
+                const roomDetails = response?.data || room;
+                setExpandedRoomDetails(roomDetails);
+                setMainImage(roomDetails.img1 || placeholderImage);
             } catch (err) {
                 console.error('Lỗi khi tải thông tin chi tiết phòng:', err);
-                setExpandedRoomDetails(structuredClone(room));
+                setExpandedRoomDetails(room);
+                setMainImage(room.img1 || placeholderImage);
                 toast.error(`Không thể tải thông tin chi tiết phòng: ${err.message}`);
             } finally {
                 setLoading(false);
-                console.log(expandedRoomRow);
             }
         }
+    };
+
+    const handleThumbnailClick = (img) => {
+        setMainImage(img);
     };
 
     const handleCheckboxChange = (categoryId) => {
@@ -273,8 +273,8 @@ export default function RoomTabs() {
             setLoading(true);
             await RoomViewService.updateRoomCategoryStatus(category.id, 'INACTIVE');
             await filteredCategories(pageCategories);
-            setExpandedRow(structuredClone(null));
-            setExpandedRowDetails(structuredClone(null));
+            setExpandedRow(null);
+            setExpandedRowDetails(null);
             toast.success('Đã ngừng kinh doanh hạng phòng thành công');
         } catch (err) {
             console.error('Lỗi khi ngừng kinh doanh hạng phòng:', err);
@@ -290,8 +290,8 @@ export default function RoomTabs() {
             setLoading(true);
             await RoomViewService.deleteRoomCategory(category.id);
             await filteredCategories(pageCategories);
-            setExpandedRow(structuredClone(null));
-            setExpandedRowDetails(structuredClone(null));
+            setExpandedRow(null);
+            setExpandedRowDetails(null);
             toast.success('Đã xóa hạng phòng thành công');
         } catch (err) {
             console.error('Lỗi khi xóa hạng phòng:', err);
@@ -303,14 +303,15 @@ export default function RoomTabs() {
 
     const handleCategoriesPageChange = (event, newPage) => {
         setPageCategories(newPage);
-        setExpandedRow(structuredClone(null));
-        setExpandedRowDetails(structuredClone(null));
+        setExpandedRow(null);
+        setExpandedRowDetails(null);
     };
 
     const handleRoomsPageChange = (event, newPage) => {
         setPageRooms(newPage);
-        setExpandedRoomRow(structuredClone(null));
-        setExpandedRoomDetails(structuredClone(null));
+        setExpandedRoomRow(null);
+        setExpandedRoomDetails(null);
+        setMainImage(null);
     };
 
     const handleRowsPerPageChange = (event) => {
@@ -318,10 +319,11 @@ export default function RoomTabs() {
         setRecordsPerPage(newRecordsPerPage);
         setPageCategories(0);
         setPageRooms(0);
-        setExpandedRow(structuredClone(null));
-        setExpandedRowDetails(structuredClone(null));
-        setExpandedRoomRow(structuredClone(null));
-        setExpandedRoomDetails(structuredClone(null));
+        setExpandedRow(null);
+        setExpandedRowDetails(null);
+        setExpandedRoomRow(null);
+        setExpandedRoomDetails(null);
+        setMainImage(null);
     };
 
     const getRoomStatusLabel = (status) => {
@@ -609,10 +611,10 @@ export default function RoomTabs() {
                                                                                     src={expandedRowDetails.imgUrl ? (expandedRowDetails.imgUrl.startsWith('http') ? expandedRowDetails.imgUrl : `http://localhost:8080/${expandedRowDetails.imgUrl}`) : placeholderImage}
                                                                                     alt={expandedRowDetails.name}
                                                                                     style={{
-                                                                                        width: '120px', // 150px * 0.8
-                                                                                        height: '120px', // 150px * 0.8
+                                                                                        width: '120px',
+                                                                                        height: '120px',
                                                                                         objectFit: 'cover',
-                                                                                        marginTop: '6.4px' // 8px * 0.8
+                                                                                        marginTop: '6.4px'
                                                                                     }}
                                                                                 />
                                                                             </Box>
@@ -786,24 +788,53 @@ export default function RoomTabs() {
                                                                         Thông tin chi tiết
                                                                     </Typography>
                                                                     <Grid container spacing={0.8}>
-                                                                        <Grid item xs={4}>
-                                                                            <Box>
-                                                                                <Typography variant="body2" sx={{ fontSize: '0.6rem', fontWeight: 'bold' }}>
-                                                                                    Ảnh:
-                                                                                </Typography>
-                                                                                <img
-                                                                                    src={expandedRoomDetails.imgUrl ? (expandedRoomDetails.imgUrl.startsWith('http') ? expandedRoomDetails.imgUrl : `http://localhost:8080/${expandedRoomDetails.imgUrl}`) : placeholderImage}
-                                                                                    alt={`Phòng ${expandedRoomDetails.id}`}
-                                                                                    style={{
-                                                                                        width: '120px', // 150px * 0.8
-                                                                                        height: '120px', // 150px * 0.8
-                                                                                        objectFit: 'cover',
-                                                                                        marginTop: '6.4px' // 8px * 0.8
-                                                                                    }}
-                                                                                />
+                                                                        <Grid item xs={12}>
+                                                                            <Box sx={{ display: 'flex', gap: 0.8 }}>
+                                                                                <Box>
+                                                                                    <img
+                                                                                        src={
+                                                                                            mainImage
+                                                                                                ? (mainImage.startsWith('http')
+                                                                                                    ? mainImage
+                                                                                                    : `http://localhost:8080/${mainImage}`)
+                                                                                                : (expandedRoomDetails.img1 || placeholderImage)
+                                                                                        }
+                                                                                        alt={`Phòng ${expandedRoomDetails.id}`}
+                                                                                        style={{
+                                                                                            width: '300px',
+                                                                                            height: '200px',
+                                                                                            objectFit: 'cover',
+                                                                                            borderRadius: '8px'
+                                                                                        }}
+                                                                                    />
+                                                                                </Box>
+                                                                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4 }}>
+                                                                                    {[expandedRoomDetails.img1, expandedRoomDetails.img2, expandedRoomDetails.img3, expandedRoomDetails.img4].map((img, index) => (
+                                                                                        img && (
+                                                                                            <img
+                                                                                                key={index}
+                                                                                                src={
+                                                                                                    img.startsWith('http')
+                                                                                                        ? img
+                                                                                                        : `http://localhost:8080/${img}`
+                                                                                                }
+                                                                                                alt={`Thumbnail ${index + 1}`}
+                                                                                                onClick={() => handleThumbnailClick(img)}
+                                                                                                style={{
+                                                                                                    width: '60px',
+                                                                                                    height: '60px',
+                                                                                                    objectFit: 'cover',
+                                                                                                    borderRadius: '4px',
+                                                                                                    cursor: 'pointer',
+                                                                                                    border: mainImage === img ? '2px solid #1976d2' : 'none'
+                                                                                                }}
+                                                                                            />
+                                                                                        )
+                                                                                    ))}
+                                                                                </Box>
                                                                             </Box>
                                                                         </Grid>
-                                                                        <Grid item xs={8}>
+                                                                        <Grid item xs={12}>
                                                                             <Grid container spacing={0.8}>
                                                                                 <Grid item xs={6}>
                                                                                     <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
@@ -815,13 +846,19 @@ export default function RoomTabs() {
                                                                                     <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
                                                                                         <strong>Tầng:</strong> {expandedRoomDetails.floor !== null && expandedRoomDetails.floor !== undefined ? expandedRoomDetails.floor : 'Không xác định'}
                                                                                     </Typography>
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
+                                                                                        <strong>Ngày bắt đầu:</strong> {expandedRoomDetails.startDate ? new Date(expandedRoomDetails.startDate).toLocaleDateString('vi-VN') : 'Không xác định'}
+                                                                                    </Typography>
                                                                                 </Grid>
                                                                                 <Grid item xs={6}>
                                                                                     <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
                                                                                         <strong>Tình trạng:</strong> {getRoomStatusLabel(expandedRoomDetails.status)}
                                                                                     </Typography>
                                                                                     <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
-                                                                                        <strong>Trạng thái dọn dẹp:</strong> {expandedRoomDetails.isClean ? 'Sạch' : 'Chưa dọn'}
+                                                                                        <strong>Thời gian check-in:</strong> {expandedRoomDetails.checkInDuration ? `${expandedRoomDetails.checkInDuration} giờ` : '0 giờ'}
+                                                                                    </Typography>
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
+                                                                                        <strong>Ghi chú:</strong> {expandedRoomDetails.note || 'Không có'}
                                                                                     </Typography>
                                                                                     <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
                                                                                         <strong>Chi nhánh:</strong> Chi nhánh trung tâm
