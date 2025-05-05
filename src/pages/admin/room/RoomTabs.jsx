@@ -107,19 +107,23 @@ export default function RoomTabs() {
     const filteredRooms = React.useCallback(async (currentPage = 0) => {
         try {
             setLoading(true);
-            const response = await RoomViewService.searchRoomView({
+            const params = {
                 keyword: searchRoom,
                 status: statusRoom,
+                categoryId: categoryRoom || '',
                 page: currentPage,
                 size: recordsPerPage,
-            });
+            };
+            console.log('Tham số gửi đi:', params); // Debug log
+            const response = await RoomViewService.searchRoomView(params);
+            console.log('Dữ liệu trả về:', response?.data); // Debug log
             if (response?.data?.content) {
                 setRooms(response.data.content);
                 setTotalRooms(response.data.totalElements || 0);
             } else {
                 setRooms([]);
                 setTotalRooms(0);
-                toast.error('Không có dữ liệu phòng trả về');
+                toast.info('Không có phòng nào khớp với bộ lọc');
             }
         } catch (err) {
             console.error('Lỗi khi tìm kiếm phòng:', err);
@@ -129,7 +133,7 @@ export default function RoomTabs() {
         } finally {
             setLoading(false);
         }
-    }, [searchRoom, statusRoom, recordsPerPage]);
+    }, [searchRoom, statusRoom, categoryRoom, recordsPerPage]);
 
     const fetchRoomCategories = React.useCallback(async () => {
         try {
@@ -440,24 +444,36 @@ export default function RoomTabs() {
                                     <InputLabel sx={{ fontSize: '0.7rem' }}>Loại phòng</InputLabel>
                                     <Select
                                         value={categoryRoom}
-                                        onChange={(e) => setCategoryRoom(e.target.value)}
+                                        onChange={(e) => {
+                                            setCategoryRoom(e.target.value === '' ? '' : e.target.value);
+                                            setPageRooms(0); // Reset page when filter changes
+                                        }}
                                         label="Loại phòng"
                                         variant="outlined"
                                         sx={{ fontSize: '0.7rem' }}
                                     >
                                         <MenuItem value="" sx={{ fontSize: '0.7rem' }}>Tất cả</MenuItem>
-                                        {roomCategories.map((category) => (
-                                            <MenuItem key={category.id} value={category.id} sx={{ fontSize: '0.7rem' }}>
-                                                {category.name}
+                                        {roomCategories.length > 0 ? (
+                                            roomCategories.map((category) => (
+                                                <MenuItem key={category.id} value={category.id} sx={{ fontSize: '0.7rem' }}>
+                                                    {category.name}
+                                                </MenuItem>
+                                            ))
+                                        ) : (
+                                            <MenuItem value="" disabled sx={{ fontSize: '0.7rem' }}>
+                                                Không có hạng phòng nào
                                             </MenuItem>
-                                        ))}
+                                        )}
                                     </Select>
                                 </FormControl>
                                 <FormControl fullWidth sx={{ mb: 1.6 }} size="small">
                                     <InputLabel sx={{ fontSize: '0.7rem' }}>Tình trạng</InputLabel>
                                     <Select
                                         value={statusRoom}
-                                        onChange={(e) => setStatusRoom(e.target.value)}
+                                        onChange={(e) => {
+                                            setStatusRoom(e.target.value);
+                                            setPageRooms(0); // Reset page when filter changes
+                                        }}
                                         label="Tình trạng"
                                         variant="outlined"
                                         sx={{ fontSize: '0.7rem' }}
@@ -876,7 +892,9 @@ export default function RoomTabs() {
                                         ) : (
                                             <TableRow>
                                                 <TableCell colSpan={5} align="center" sx={{ fontSize: '0.6rem' }}>
-                                                    Không có dữ liệu phòng
+                                                    {categoryRoom && categoryRoom !== ''
+                                                        ? 'Không có phòng nào thuộc hạng phòng đã chọn'
+                                                        : 'Không có dữ liệu phòng'}
                                                 </TableCell>
                                             </TableRow>
                                         )}

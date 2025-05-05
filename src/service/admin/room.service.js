@@ -1,8 +1,6 @@
 import { axiosInstance } from "../../configs/axios.config.js";
 
 class RoomViewService {
-    // Các phương thức hiện có...
-
     /**
      * Lấy tất cả phòng
      */
@@ -13,11 +11,12 @@ class RoomViewService {
     /**
      * Tìm kiếm phòng theo điều kiện
      */
-    static async searchRoomView({ keyword = "", status = "", floor = "", page = 0, size = 10 }) {
+    static async searchRoomView({ keyword = "", status = "", floor = "", categoryId = "", page = 0, size = 10 }) {
         let query = `/rooms/search?page=${page}&size=${size}`;
         if (keyword) query += `&keyword=${encodeURIComponent(keyword)}`;
         if (status) query += `&status=${status}`;
         if (floor) query += `&floor=${floor}`;
+        if (categoryId) query += `&categoryId=${categoryId}`;
         return await axiosInstance.get(query);
     }
 
