@@ -106,14 +106,7 @@ export default function RoomTabs() {
         setOpenRoomDialog(true);
     }
 
-    // Hàm đóng dialog
-    const handleCloseRoomCategoryDialog = () => {
-        setOpenRoomCategoryDialog(false);
-    }
 
-    const handleCloseRoomDialog = () => {
-        setOpenRoomDialog(false);
-    }
 
     const filteredCategories = React.useCallback(async (currentPage = 0) => {
         try {
