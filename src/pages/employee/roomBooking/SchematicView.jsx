@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Card, CardContent, Typography, Chip, IconButton } from '@mui/material';
+import { Box, Card, CardContent, Typography, Chip, IconButton, Menu, MenuItem } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import Brightness2Icon from '@mui/icons-material/Brightness2';
@@ -9,98 +9,8 @@ import ViewModeButtons from './ViewModeButtons';
 import ActionButtons from './ActionButtons';
 import { StatusBar } from './StatusBar';
 import RoomViewService from "../../../service/admin/room.service.js";
-
-// Dữ liệu ảo
-const mockRooms = [
-    {
-        id: 1,
-        status: "AVAILABLE",
-        isClean: true,
-        roomCategory: {
-            code: "VIP01",
-            name: "Phòng VIP 1",
-            description: "Phòng sang trọng, view đẹp",
-            hourlyPrice: 200000,
-            dailyPrice: 1000000,
-            overnightPrice: 800000,
-        },
-        startDate: [2025, 4, 21],
-        checkInDuration: 2,
-    },
-    {
-        id: 2,
-        status: "IN_USE",
-        isClean: false,
-        roomCategory: {
-            code: "STD01",
-            name: "Phòng Tiêu Chuẩn 1",
-            description: "Phòng tiêu chuẩn, đầy đủ tiện nghi",
-            hourlyPrice: 150000,
-            dailyPrice: 600000,
-            overnightPrice: 500000,
-        },
-        startDate: [2025, 4, 20],
-        checkInDuration: 1,
-    },
-    {
-        id: 3,
-        status: "CHECKOUT_SOON",
-        isClean: false,
-        roomCategory: {
-            code: "VIP02",
-            name: "Phòng VIP 2",
-            description: "Phòng VIP, có bồn tắm",
-            hourlyPrice: 250000,
-            dailyPrice: 1200000,
-            overnightPrice: 900000,
-        },
-        startDate: [2025, 4, 19],
-        checkInDuration: 2,
-    },
-    {
-        id: 4,
-        status: "UPCOMING",
-        isClean: true,
-        roomCategory: {
-            code: "STD02",
-            name: "Phòng Tiêu Chuẩn 2",
-            description: "Phòng tiêu chuẩn, giá rẻ",
-            hourlyPrice: 120000,
-            dailyPrice: 500000,
-            overnightPrice: 400000,
-        },
-        startDate: [2025, 4, 22],
-        checkInDuration: 3,
-    },
-    {
-        id: 5,
-        status: "MAINTENANCE",
-        isClean: false,
-        roomCategory: {
-            code: "ECO01",
-            name: "Phòng Kinh Tế 1",
-            description: "Phòng giá rẻ, đang bảo trì",
-            hourlyPrice: 100000,
-            dailyPrice: 400000,
-            overnightPrice: 300000,
-        },
-    },
-    {
-        id: 6,
-        status: "OVERDUE",
-        isClean: false,
-        roomCategory: {
-            code: "VIP03",
-            name: "Phòng VIP 3",
-            description: "Phòng VIP, quá hạn trả",
-            hourlyPrice: 300000,
-            dailyPrice: 1500000,
-            overnightPrice: 1100000,
-        },
-        startDate: [2025, 4, 18],
-        checkInDuration: 1,
-    },
-];
+import RoomDetailsDialog from './RoomDetailsDialog';
+import QuickBookingDialog from './QuickBookingDialog';
 
 export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeChange }) {
     const [anchorElSearch, setAnchorElSearch] = useState(null);
@@ -109,6 +19,11 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
     const [rooms, setRooms] = useState([]);
     const [allRooms, setAllRooms] = useState([]);
     const [activeFilter, setActiveFilter] = useState('ALL');
+    const [selectedRoom, setSelectedRoom] = useState(null);
+    const [roomDetailsDialogOpen, setRoomDetailsDialogOpen] = useState(false);
+    const [quickBookingDialogOpen, setQuickBookingDialogOpen] = useState(false);
+    const [menuAnchorEl, setMenuAnchorEl] = useState(null);
+    const [menuRoom, setMenuRoom] = useState(null);
 
     useEffect(() => {
         const fetchRooms = async () => {
@@ -188,9 +103,12 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
 
     const getRoomBackgroundColor = (status) => {
         switch (status) {
-            case 'IN_USE': return '#279656';
-            case 'CHECKOUT_SOON': return '#FFFFFF';
-            case 'AVAILABLE': return '#FFFFFF';
+            case 'IN_USE': return '#E8F5E9'; // Light green for rooms in use
+            case 'CHECKOUT_SOON': return '#E3F2FD'; // Light blue for rooms soon to checkout
+            case 'OVERDUE': return '#E1F5FE'; // Light cyan for overdue rooms
+            case 'UPCOMING': return '#FFF8E1'; // Light amber for upcoming bookings
+            case 'AVAILABLE': return '#FFFFFF'; // White for available rooms
+            case 'MAINTENANCE': return '#FFEBEE'; // Light red for maintenance rooms
             default: return '#FFFFFF';
         }
     };
@@ -216,7 +134,113 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
         }
     };
 
+    // Handle menu open for room actions
+    const handleRoomMenuClick = (event, room) => {
+        event.stopPropagation();
+        setMenuAnchorEl(event.currentTarget);
+        setMenuRoom(room);
+    };
+
+    // Handle menu close
+    const handleMenuClose = () => {
+        setMenuAnchorEl(null);
+        setMenuRoom(null);
+    };
+
+    // Toggle room cleaning status
+    const handleToggleCleanStatus = async () => {
+        if (!menuRoom) return;
+        
+        try {
+            const newCleanStatus = !menuRoom.isClean;
+            console.log(`Changing room ${menuRoom.id} cleaning status to: ${newCleanStatus ? 'Đã dọn' : 'Chưa dọn'}`);
+            
+            // Update room cleaning status via API
+            await RoomViewService.updateRoomCleanStatus(menuRoom.id, newCleanStatus);
+            
+            // Update the local state
+            const updatedRooms = rooms.map(room => 
+                room.id === menuRoom.id ? { ...room, isClean: newCleanStatus } : room
+            );
+            setRooms(updatedRooms);
+            
+            const updatedAllRooms = allRooms.map(room => 
+                room.id === menuRoom.id ? { ...room, isClean: newCleanStatus } : room
+            );
+            setAllRooms(updatedAllRooms);
+            
+            handleMenuClose();
+        } catch (error) {
+            console.error('Error updating room cleaning status:', error);
+        }
+    };
+
     const statusCounts = getRoomStatusCounts();
+
+    // Xử lý khi click vào card phòng
+    const handleRoomCardClick = async (room) => {
+        if (!room) {
+            console.error('Room data is undefined');
+            return;
+        }
+        
+        // Ghi log thông tin phòng 
+        console.log('Room clicked:', room);
+        console.log('Room ID:', room.id);
+        console.log('Room status:', room.status);
+        console.log('Room isClean:', room.isClean);
+        
+        // Đảm bảo phòng có ID
+        if (!room.id) {
+            console.error('Room ID is missing');
+            return;
+        }
+        
+        try {
+            // Đặt thông tin phòng với ID được chọn
+            setSelectedRoom(room);
+            
+            // Hiển thị dialog tương ứng dựa trên trạng thái phòng
+            if (room.status === 'IN_USE' || room.status === 'CHECKOUT_SOON' || room.status === 'OVERDUE') {
+                // Phòng đang sử dụng - Hiển thị dialog chi tiết phòng
+                console.log('Opening RoomDetailsDialog for occupied room');
+                setRoomDetailsDialogOpen(true);
+            } else {
+                // Tất cả các loại phòng khác - Hiển thị dialog đặt phòng nhanh
+                // Bao gồm: phòng trống đã dọn, phòng trống chưa dọn, phòng bảo trì, phòng sắp có khách
+                console.log('Opening QuickBookingDialog for any room state');
+                setQuickBookingDialogOpen(true);
+            }
+        } catch (err) {
+            console.error('Lỗi xử lý phòng:', err);
+        }
+    };
+
+    // Làm mới dữ liệu phòng từ API
+    const refreshRoomData = async () => {
+        try {
+            const res = await RoomViewService.getAllRoomView();
+            const roomData = res.data.content || [];
+            if (roomData.length > 0) {
+                setRooms(roomData);
+                setAllRooms(roomData);
+            }
+        } catch (err) {
+            console.error('Không thể làm mới danh sách phòng:', err);
+        }
+    };
+
+    // Đóng dialog chi tiết phòng
+    const handleRoomDetailsDialogClose = () => {
+        setRoomDetailsDialogOpen(false);
+        refreshRoomData(); // Làm mới dữ liệu phòng sau khi đóng dialog
+    };
+
+    // Đóng dialog đặt phòng nhanh
+    const handleQuickBookingDialogClose = () => {
+        setQuickBookingDialogOpen(false);
+        refreshRoomData(); // Làm mới dữ liệu phòng sau khi đóng dialog
+    };
 
     return (
         <Box sx={{ flexGrow: 1 }}>
@@ -268,18 +292,37 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 2, mt: 2 }}>
                         {rooms.map((room) => {
                             const statusInfo = getStatusLabelAndColor(room.status, room.isClean);
-                            const backgroundColor = getRoomBackgroundColor(room.status);
                             const roomCategory = room.roomCategory || {};
+                            
+                            // Kiểm tra xem card có thể click được hay không
+                            const isClickable = room.status === 'IN_USE' || 
+                                               room.status === 'CHECKOUT_SOON' || 
+                                               room.status === 'OVERDUE' ||
+                                               (room.status === 'AVAILABLE' && room.isClean);
+                            
+                            // Console.log để debug
+                            console.log(`Room ${room.id}: status=${room.status}, isClean=${room.isClean}, clickable=${isClickable}`);
+                            
                             return (
                                 <Card
                                     key={room.id}
                                     sx={{
                                         borderRadius: 4,
                                         position: 'relative',
-                                        backgroundColor: backgroundColor,
-                                        color: backgroundColor === '#FFFFFF' ? 'inherit' : '#FFFFFF',
+                                        backgroundColor: getRoomBackgroundColor(room.status),
+                                        color: 'inherit',
                                         boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
                                         border: '1px solid #e0e0e0',
+                                        cursor: 'pointer',
+                                        '&:hover': {
+                                            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)',
+                                            transform: 'translateY(-3px)',
+                                            transition: 'all 0.3s ease'
+                                        }
+                                    }}
+                                    onClick={() => {
+                                        console.log(`Card clicked: Room ${room.id}`);
+                                        handleRoomCardClick(room);
                                     }}
                                 >
                                     <CardContent sx={{ p: 1.5 }}>
@@ -288,12 +331,16 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                                 label={statusInfo.label}
                                                 size="small"
                                                 sx={{
-                                                    backgroundColor: 'rgba(90,90,90,0.16)', // Màu nền trắng
+                                                    backgroundColor: 'rgba(90,90,90,0.16)',
                                                     color: statusInfo.textColor,
                                                     fontWeight: 'bold',
                                                 }}
                                             />
-                                            <IconButton size="small" sx={{ color: backgroundColor === '#FFFFFF' ? 'inherit' : '#FFFFFF' }}>
+                                            <IconButton 
+                                                size="small" 
+                                                sx={{ color: 'inherit' }}
+                                                onClick={(e) => handleRoomMenuClick(e, room)}
+                                            >
                                                 <MoreVertIcon />
                                             </IconButton>
                                         </Box>
@@ -302,7 +349,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                                 variant="h6"
                                                 sx={{
                                                     textAlign: 'left',
-                                                    color: backgroundColor === '#FFFFFF' ? 'inherit' : '#FFFFFF',
+                                                    color: 'inherit',
                                                     fontWeight: 'bold',
                                                     fontSize: '1.2rem',
                                                 }}
@@ -314,7 +361,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                             variant="body2"
                                             sx={{
                                                 mb: 1,
-                                                color: backgroundColor === '#FFFFFF' ? '#757575' : '#FFFFFF',
+                                                color: '#757575',
                                                 fontSize: '0.9rem',
                                                 whiteSpace: 'nowrap',
                                                 overflow: 'hidden',
@@ -327,7 +374,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                             variant="body2"
                                             sx={{
                                                 mb: 2,
-                                                color: backgroundColor === '#FFFFFF' ? '#757575' : '#FFFFFF',
+                                                color: '#757575',
                                                 fontSize: '0.8rem',
                                                 fontStyle: 'italic',
                                                 whiteSpace: 'nowrap',
@@ -339,28 +386,28 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                         </Typography>
                                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <AccessTimeIcon fontSize="small" sx={{ color: backgroundColor === '#FFFFFF' ? 'inherit' : '#FFFFFF' }} />
+                                                <AccessTimeIcon fontSize="small" sx={{ color: 'inherit' }} />
                                                 <Typography
                                                     variant="body2"
-                                                    sx={{ color: backgroundColor === '#FFFFFF' ? 'inherit' : '#FFFFFF', fontSize: '0.9rem' }}
+                                                    sx={{ color: 'inherit', fontSize: '0.9rem' }}
                                                 >
                                                     {roomCategory.hourlyPrice?.toLocaleString('vi-VN', { style: 'decimal' }) || '0'}đ
                                                 </Typography>
                                             </Box>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <WbSunnyIcon fontSize="small" sx={{ color: backgroundColor === '#FFFFFF' ? 'inherit' : '#FFFFFF' }} />
+                                                <WbSunnyIcon fontSize="small" sx={{ color: 'inherit' }} />
                                                 <Typography
                                                     variant="body2"
-                                                    sx={{ color: backgroundColor === '#FFFFFF' ? 'inherit' : '#FFFFFF', fontSize: '0.9rem' }}
+                                                    sx={{ color: 'inherit', fontSize: '0.9rem' }}
                                                 >
                                                     {roomCategory.dailyPrice?.toLocaleString('vi-VN', { style: 'decimal' }) || '0'}đ
                                                 </Typography>
                                             </Box>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <Brightness2Icon fontSize="small" sx={{ color: backgroundColor === '#FFFFFF' ? 'inherit' : '#FFFFFF' }} />
+                                                <Brightness2Icon fontSize="small" sx={{ color: 'inherit' }} />
                                                 <Typography
                                                     variant="body2"
-                                                    sx={{ color: backgroundColor === '#FFFFFF' ? 'inherit' : '#FFFFFF', fontSize: '0.9rem' }}
+                                                    sx={{ color: 'inherit', fontSize: '0.9rem' }}
                                                 >
                                                     {roomCategory.overnightPrice?.toLocaleString('vi-VN', { style: 'decimal' }) || '0'}đ
                                                 </Typography>
@@ -377,6 +424,48 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                     </Box>
                 )}
             </Box>
+
+            {/* Room action menu */}
+            <Menu
+                anchorEl={menuAnchorEl}
+                open={Boolean(menuAnchorEl)}
+                onClose={handleMenuClose}
+            >
+                <MenuItem onClick={handleToggleCleanStatus}>
+                    {menuRoom?.isClean ? 'Đánh dấu chưa dọn' : 'Đánh dấu đã dọn'}
+                </MenuItem>
+            </Menu>
+
+            {/* Dialog chi tiết phòng cho phòng đang sử dụng */}
+            <RoomDetailsDialog
+                open={roomDetailsDialogOpen}
+                onClose={handleRoomDetailsDialogClose}
+                roomData={selectedRoom && {
+                    roomNumber: `P.${selectedRoom?.id?.toString().padStart(3, '0') || '000'}`,
+                    roomType: selectedRoom?.roomCategory?.name || 'Phòng tiêu chuẩn',
+                    status: selectedRoom?.status,
+                    isClean: selectedRoom?.isClean,
+                    customerType: 'Khách lẻ',
+                    guestInfo: '0 người lớn, 0 trẻ em, 0 giấy tờ',
+                    bookingId: `DP${selectedRoom?.id?.toString().padStart(6, '0') || '000000'}`,
+                    checkIn: selectedRoom?.startDate ? 
+                        new Date(selectedRoom.startDate[0], selectedRoom.startDate[1] - 1, selectedRoom.startDate[2]).toLocaleDateString('vi-VN') + ', 12:00' : '',
+                    checkOut: selectedRoom?.checkInDuration && selectedRoom?.startDate ? 
+                        new Date(selectedRoom.startDate[0], selectedRoom.startDate[1] - 1, selectedRoom.startDate[2] + selectedRoom.checkInDuration).toLocaleDateString('vi-VN') + ', 12:00' : '',
+                    stayDuration: `${selectedRoom?.checkInDuration || 0} ngày`,
+                    timeUsed: 'Đã sử dụng: 0 giờ 0 phút',
+                    price: selectedRoom?.roomCategory?.dailyPrice?.toLocaleString('vi-VN') || '0',
+                    amountPaid: '0',
+                    notes: 'Chưa có ghi chú'
+                }}
+            />
+
+            {/* Dialog đặt phòng nhanh cho phòng trống */}
+            <QuickBookingDialog
+                open={quickBookingDialogOpen}
+                onClose={handleQuickBookingDialogClose}
+                initialRoomData={selectedRoom}
+            />
         </Box>
     );
 }
