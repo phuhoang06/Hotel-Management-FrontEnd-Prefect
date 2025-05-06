@@ -62,8 +62,28 @@ class RoomViewService {
     /**
      * Cập nhật thông tin phòng
      */
-    static async updateRoom(id, roomData) {
-        return await axiosInstance.put(`/rooms/${id}`, roomData);
+    static async updateRoom(id, roomData, images = {}) {
+        const formData = new FormData();
+        formData.append('room', JSON.stringify(roomData));
+
+        // Handle images, supporting both files (new images) and strings (existing image URLs)
+        ['img1', 'img2', 'img3', 'img4'].forEach((key) => {
+            if (key in images) {
+                const value = images[key];
+                if (value instanceof File) {
+                    formData.append(key, value); // Send new image file
+                } else if (typeof value === 'string' && value) {
+                    formData.append(key, value); // Send existing image URL
+                }
+                // If value is null or undefined, do not append (indicates deletion)
+            }
+        });
+
+        return await axiosInstance.put(`/rooms/${id}/edit`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
     }
 
     /**

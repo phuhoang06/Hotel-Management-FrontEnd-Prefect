@@ -32,6 +32,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import AddRoomCategoryDialog from './AddRoomCategoryDialog.jsx';
 import AddRoomDialog from './AddRoomDialog.jsx';
 import { debounce } from 'lodash';
+import UpdateRoomDialog from "./UpdateRoomDialog.jsx";
 
 const placeholderImage = 'https://via.placeholder.com/200x150?text=No+Image';
 
@@ -128,6 +129,12 @@ export default function RoomTabs() {
 
     // Đóng dialog thêm phòng
     const handleCloseRoomDialog = () => setOpenRoomDialog(false);
+
+    // Trạng thái dialog cập nhật phòng
+    const [openUpdateRoomDialog, setOpenUpdateRoomDialog] = useState(false);
+    const [selectedRoom, setSelectedRoom] = useState(null);
+
+
 
     // Tải danh sách hạng phòng ban đầu
     const fetchRoomCategories = useCallback(async () => {
@@ -361,7 +368,8 @@ export default function RoomTabs() {
     // Xử lý cập nhật phòng
     const handleRoomUpdate = (room, e) => {
         e?.stopPropagation();
-        alert(`Chuyển đến form chỉnh sửa phòng: ${room.id}`);
+        setSelectedRoom(room);
+        setOpenUpdateRoomDialog(true);
     };
 
     // Xử lý xóa phòng
@@ -517,6 +525,16 @@ export default function RoomTabs() {
                 open={openRoomDialog}
                 onClose={handleCloseRoomDialog}
                 onSuccess={() => filteredRooms(page)}
+            />
+
+            <UpdateRoomDialog
+                open={openUpdateRoomDialog}
+                onClose={() => {
+                    setOpenUpdateRoomDialog(false);
+                    setSelectedRoom(null);
+                }}
+                onSuccess={() => filteredRooms(page)}
+                room={selectedRoom}
             />
 
             <Grid container spacing={2} sx={{ minWidth: '960px' }}>
