@@ -36,6 +36,7 @@
   - [x] Calculate prices automatically based on room type and duration
   - [x] Handle success and error states for booking process
   - [x] Pass selected room data from Grid/List/Schematic views to QuickBookingDialog
+  - [x] Implement direct check-in using /api/checkins API for immediate room status change
 
 - [x] Implement complete room status display
   - [x] Update status logic according to documentation

@@ -1398,70 +1398,37 @@ const QuickBookingDialog = ({ open, onClose, initialRoomData = null , handleUpda
 
 
 // Handle room booking using walk-in endpoint
-
     const handleRoomBooking = async (isCheckIn = false) => {
-
 // Validate required data
-
         if (!selectedRoom || !selectedRoom.id) {
-
             setErrorMessage('Vui lòng chọn phòng');
-
             setShowAlert(true);
-
             return;
-
         }
-
-
 
         if (!customerId) {
-
             setErrorMessage('Vui lòng chọn khách hàng hoặc thêm khách mới');
-
             setShowAlert(true);
-
             return;
-
         }
 
-
-
         const rentTypeMapping = {
-
             'Giờ': 'HOURLY',
-
             'Ngày': 'DAILY',
-
             'Đêm': 'OVERNIGHT'
-
         };
 
-
-
         try {
-
             setLoading(true);
-
             setErrorMessage('');
-
             setSuccessMessage('');
 
-
-
 // Prepare check-in time
-
             const checkinDateTime = new Date(checkInDate);
-
             checkinDateTime.setHours(
-
                 checkInTimeValue.getHours(),
-
                 checkInTimeValue.getMinutes()
-
             );
-
-
 
 // Cho phép đặt phòng tại thời điểm hiện tại hoặc tương lai
             const now = new Date();
@@ -1476,112 +1443,87 @@ const QuickBookingDialog = ({ open, onClose, initialRoomData = null , handleUpda
                 return;
             }
 
-
-
 // Extract duration from duration state
-
             const durationMatch = duration.match(/\d+/);
-
             const durationValue = durationMatch ? parseInt(durationMatch[0], 10) : 1;
 
-
-
 // Create booking request payload (WalkInRequestDTO)
-
             const walkInRequest = {
-
                 customerId: customerId,
-
                 note: note,
-
                 paidAmount: paidAmount,
-
                 rooms: [
-
                     {
-
                         roomId: selectedRoom.id,
-
                         checkinTime: convertTimeVi(checkinDateTime),
-
                         adultCount: adultCount,
-
                         childCount: childCount,
-
                         rentType: rentTypeMapping[bookingType] || 'HOURLY',
-
                         duration: durationValue
-
                     }
-
                 ]
-
             };
-
-
-
 
 
             console.log("Sending Walk-in Request:", walkInRequest);
 
-
+            let response;
+            let bookingId;
 
 // Call API to create walk-in booking
-
-            const response = await checkinService.createWalkInBooking(walkInRequest);
-
-
-
+            if (!isCheckIn) {
+                // Normal booking mode
+                response = await checkinService.createWalkInBooking(walkInRequest);
+                console.log("Walk-in Response:", response);
+                
+                if (response && response.booking && response.booking.bookingId) {
+                    bookingId = response.booking.bookingId;
+                    setSuccessMessage('Đặt phòng thành công!');
+                    setShowAlert(true);
+                } else {
+                    throw new Error(response?.status || 'Không nhận được phản hồi đặt phòng hợp lệ từ máy chủ');
+                }
+            } else {
+                // Check-in mode: First create booking then immediately check in
+                response = await checkinService.createWalkInBooking(walkInRequest);
             console.log("Walk-in Response:", response);
 
-
-
             if (response && response.booking && response.booking.bookingId) {
+                    bookingId = response.booking.bookingId;
+                    
+                    // Perform immediate check-in using the new API
+                    const checkinData = {
+                        bookingId: bookingId,
+                        roomIdsToCheckin: [selectedRoom.id]
+                    };
+                    
+                    console.log("Sending Check-in Request:", checkinData);
+                    const checkinResponse = await checkinService.performCheckin(checkinData);
+                    console.log("Check-in Response:", checkinResponse);
 
-                setSuccessMessage(isCheckIn ? 'Nhận phòng thành công!' : 'Đặt phòng thành công!');
-
+                    setSuccessMessage('Nhận phòng thành công!');
                 setShowAlert(true);
-
-
-
-// Close dialog after delay, passing booking data
-
-                setTimeout(() => {
-
-                    if (onClose) onClose(response.booking); // Pass the full booking object
-
-                }, 1500);
-
-// thay doi state o component ChematicView de cap nhat lai giao dien
-
-                handleUpdateLoading()
-
-            } else {
-
-// Handle cases where response might not be as expected
-
-                throw new Error(response?.status || 'Không nhận được phản hồi đặt phòng hợp lệ từ máy chủ');
-
+                } else {
+                    throw new Error(response?.status || 'Không nhận được phản hồi đặt phòng hợp lệ từ máy chủ');
+                }
             }
 
+// Close dialog after delay, passing booking data
+                setTimeout(() => {
+                    if (onClose) onClose(response.booking); // Pass the full booking object
+                }, 1500);
+
+            // Update the SchematicView
+            handleUpdateLoading();
         } catch (error) {
-
-            console.error('Error creating walk-in booking:', error);
-
+            console.error('Error creating booking or checking in:', error);
 // Extract meaningful error message from Axios error or default
-
             const apiErrorMessage = error.response?.data?.status || error.response?.data?.message || error.message;
-
-            setErrorMessage(apiErrorMessage || 'Đã xảy ra lỗi khi tạo đặt phòng');
-
+            setErrorMessage(apiErrorMessage || 'Đã xảy ra lỗi khi tạo đặt phòng/nhận phòng');
             setShowAlert(true);
-
         } finally {
-
             setLoading(false);
-
         }
-
     };
 
 

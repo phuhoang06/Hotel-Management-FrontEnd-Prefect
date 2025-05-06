@@ -11,7 +11,7 @@ import { StatusBar } from './StatusBar';
 import RoomBookingService from "../../../service/roomBooking.service.js";
 import RoomDetailsDialog from './RoomDetailsDialog';
 import QuickBookingDialog from './QuickBookingDialog';
-    import BookingListDialog from './BookingListDialog';
+import BookingListDialog from './BookingListDialog';
 
 export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeChange }) {
     const [anchorElSearch, setAnchorElSearch] = useState(null);
@@ -97,15 +97,61 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
             maintenance: 0,
         };
 
+        // Lấy thời gian hiện tại
+        const now = new Date();
+        
+        // Định nghĩa khoảng thời gian "sắp trả" (30 phút trước thời gian checkout)
+        const checkoutWarningTime = 30 * 60 * 1000; // 30 phút * 60 giây * 1000 ms
+
         allRooms.forEach((room) => {
-            switch (room.status) {
-                case 'AVAILABLE': counts.available += 1; break;
-                case 'UPCOMING': counts.soonCheckIn += 1; break;
-                case 'IN_USE': counts.inUse += 1; break;
-                case 'CHECKOUT_SOON': counts.soonCheckOut += 1; break;
-                case 'MAINTENANCE': counts.maintenance += 1; break;
-                case 'OVERDUE': counts.overdue += 1; break;
-                default: break;
+            // Tìm booking đang sử dụng (IN_USE)
+            const activeBooking = room.bookings?.find(booking => booking.roomStatusInBooking === 'IN_USE');
+            
+            if (activeBooking) {
+                // Nếu có booking đang sử dụng, kiểm tra thời gian
+                const checkoutTime = activeBooking.checkoutTime && Array.isArray(activeBooking.checkoutTime) 
+                    ? new Date(
+                        activeBooking.checkoutTime[0], 
+                        activeBooking.checkoutTime[1] - 1, 
+                        activeBooking.checkoutTime[2],
+                        activeBooking.checkoutTime[3] || 0,
+                        activeBooking.checkoutTime[4] || 0
+                    ) : null;
+                
+                if (checkoutTime) {
+                    const timeUntilCheckout = checkoutTime - now;
+                    
+                    if (timeUntilCheckout < 0) {
+                        // Nếu thời gian checkout đã qua, đánh dấu là quá giờ
+                        counts.overdue += 1;
+                    } else if (timeUntilCheckout <= checkoutWarningTime) {
+                        // Nếu còn dưới 30 phút đến thời gian checkout, đánh dấu là sắp trả
+                        counts.soonCheckOut += 1;
+                    } else {
+                        // Đang sử dụng bình thường
+                        counts.inUse += 1;
+                    }
+                } else {
+                    // Không có thông tin checkoutTime, tính là đang sử dụng
+                    counts.inUse += 1;
+                }
+            } else {
+                // Kiểm tra các booking khác
+                const hasCheckoutSoonBooking = room.bookings?.some(booking => booking.roomStatusInBooking === 'CHECKOUT_SOON');
+                const hasOverdueBooking = room.bookings?.some(booking => booking.roomStatusInBooking === 'OVERDUE');
+                const hasUpcomingBooking = room.bookings?.some(booking => booking.roomStatusInBooking === 'UPCOMING');
+                
+                if (hasCheckoutSoonBooking) {
+                    counts.soonCheckOut += 1;
+                } else if (hasOverdueBooking) {
+                    counts.overdue += 1;
+                } else if (hasUpcomingBooking) {
+                    counts.soonCheckIn += 1;
+                } else if (room.status === 'MAINTENANCE') {
+                    counts.maintenance += 1;
+                } else if (room.status === 'AVAILABLE') {
+                    counts.available += 1;
+                }
             }
         });
 
@@ -127,21 +173,112 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
     const handleStatusFilter = (status) => {
         try {
             setActiveFilter(status);
+            
+            // Lấy thời gian hiện tại
+            const now = new Date();
+            
+            // Định nghĩa khoảng thời gian "sắp trả" (30 phút trước thời gian checkout)
+            const checkoutWarningTime = 30 * 60 * 1000; // 30 phút * 60 giây * 1000 ms
+            
             if (status === 'ALL') {
                 setRooms(allRooms);
+            } else if (status === 'IN_USE') {
+                const filteredRooms = allRooms.filter(room => {
+                    // Tìm booking đang sử dụng (IN_USE)
+                    const activeBooking = room.bookings?.find(booking => booking.roomStatusInBooking === 'IN_USE');
+                    
+                    if (activeBooking) {
+                        // Lấy thời gian checkout
+                        const checkoutTime = activeBooking.checkoutTime && Array.isArray(activeBooking.checkoutTime) 
+                            ? new Date(
+                                activeBooking.checkoutTime[0], 
+                                activeBooking.checkoutTime[1] - 1, 
+                                activeBooking.checkoutTime[2],
+                                activeBooking.checkoutTime[3] || 0,
+                                activeBooking.checkoutTime[4] || 0
+                            ) : null;
+                        
+                        if (checkoutTime) {
+                            const timeUntilCheckout = checkoutTime - now;
+                            // Chỉ tính là đang sử dụng nếu còn hơn 30 phút đến checkout và chưa quá giờ
+                            return timeUntilCheckout > checkoutWarningTime && timeUntilCheckout > 0;
+                        }
+                        return true; // Không có thông tin checkout, coi như đang sử dụng bình thường
+                    }
+                    return false;
+                });
+                
+                setRooms(filteredRooms);
+            } else if (status === 'CHECKOUT_SOON') {
+                const filteredRooms = allRooms.filter(room => {
+                    // Ưu tiên kiểm tra booking đang sử dụng trước
+                    const activeBooking = room.bookings?.find(booking => booking.roomStatusInBooking === 'IN_USE');
+                    
+                    if (activeBooking) {
+                        // Lấy thời gian checkout
+                        const checkoutTime = activeBooking.checkoutTime && Array.isArray(activeBooking.checkoutTime) 
+                            ? new Date(
+                                activeBooking.checkoutTime[0], 
+                                activeBooking.checkoutTime[1] - 1, 
+                                activeBooking.checkoutTime[2],
+                                activeBooking.checkoutTime[3] || 0,
+                                activeBooking.checkoutTime[4] || 0
+                            ) : null;
+                        
+                        if (checkoutTime) {
+                            const timeUntilCheckout = checkoutTime - now;
+                            // Sắp trả: còn dưới 30 phút đến thời gian checkout và chưa quá giờ
+                            return timeUntilCheckout <= checkoutWarningTime && timeUntilCheckout > 0;
+                        }
+                        return false;
+                    }
+                    
+                    // Nếu không có booking đang sử dụng, kiểm tra các booking có trạng thái sắp trả
+                    return room.bookings?.some(booking => booking.roomStatusInBooking === 'CHECKOUT_SOON');
+                });
+                
+                setRooms(filteredRooms);
+            } else if (status === 'OVERDUE') {
+                const filteredRooms = allRooms.filter(room => {
+                    // Ưu tiên kiểm tra booking đang sử dụng trước
+                    const activeBooking = room.bookings?.find(booking => booking.roomStatusInBooking === 'IN_USE');
+                    
+                    if (activeBooking) {
+                        // Lấy thời gian checkout
+                        const checkoutTime = activeBooking.checkoutTime && Array.isArray(activeBooking.checkoutTime) 
+                            ? new Date(
+                                activeBooking.checkoutTime[0], 
+                                activeBooking.checkoutTime[1] - 1, 
+                                activeBooking.checkoutTime[2],
+                                activeBooking.checkoutTime[3] || 0,
+                                activeBooking.checkoutTime[4] || 0
+                            ) : null;
+                        
+                        if (checkoutTime) {
+                            const timeUntilCheckout = checkoutTime - now;
+                            // Quá giờ: thời gian checkout đã qua
+                            return timeUntilCheckout < 0;
+                        }
+                        return false;
+                    }
+                    
+                    // Nếu không có booking đang sử dụng, kiểm tra các booking có trạng thái quá giờ
+                    return room.bookings?.some(booking => booking.roomStatusInBooking === 'OVERDUE');
+                });
+                
+                setRooms(filteredRooms);
+            } else if (status === 'UPCOMING') {
+                const filteredRooms = allRooms.filter(room => 
+                    room.bookings?.some(booking => booking.roomStatusInBooking === 'UPCOMING')
+                );
+                setRooms(filteredRooms);
             } else {
+                // Các trạng thái khác (AVAILABLE, MAINTENANCE) vẫn dùng room.status
                 const filteredRooms = allRooms.filter(room => room.status === status);
                 setRooms(filteredRooms);
             }
         } catch (error) {
-            console.error('Lỗi khi lọc phòng từ API, sử dụng dữ liệu ảo:', error);
-            setActiveFilter(status);
-            if (status === 'ALL') {
-                setRooms(allRooms);
-            } else {
-                const filteredRooms = allRooms.filter(room => room.status === status);
-                setRooms(filteredRooms);
-            }
+            console.error('Lỗi khi lọc phòng:', error);
         }
     };
 
@@ -211,16 +348,62 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
             // Đặt thông tin phòng với ID được chọn
             setSelectedRoom(room);
             
-            // Hiển thị dialog tương ứng dựa trên trạng thái phòng
-            if (room.status === 'IN_USE' || room.status === 'CHECKOUT_SOON' || room.status === 'OVERDUE') {
+            // Kiểm tra nếu có booking với trạng thái IN_USE, CHECKOUT_SOON hoặc OVERDUE
+            const activeBooking = room.bookings?.find(booking => 
+                booking.roomStatusInBooking === 'IN_USE' || 
+                booking.roomStatusInBooking === 'CHECKOUT_SOON' || 
+                booking.roomStatusInBooking === 'OVERDUE'
+            );
+            
+            // Hiển thị dialog tương ứng dựa trên trạng thái booking
+            if (activeBooking) {
                 // Phòng đang sử dụng - Hiển thị dialog chi tiết phòng
-                console.log('Opening RoomDetailsDialog for occupied room');
+                console.log('Opening RoomDetailsDialog for occupied room with booking:', activeBooking);
                 setRoomDetailsDialogOpen(true);
             } else {
-                // Tất cả các loại phòng khác - Hiển thị dialog đặt phòng nhanh
-                // Bao gồm: phòng trống đã dọn, phòng trống chưa dọn, phòng bảo trì, phòng sắp có khách
-                console.log('Opening QuickBookingDialog for any room state');
-                setQuickBookingDialogOpen(true);
+                // Kiểm tra thời gian hệ thống và thời gian nhận phòng 
+                // nếu có booking.roomStatusInBooking === 'UPCOMING'
+                const upcomingBooking = room.bookings?.find(booking => booking.roomStatusInBooking === 'UPCOMING');
+                
+                if (upcomingBooking) {
+                    // Lấy thời gian hiện tại
+                    const now = new Date();
+                    
+                    // Lấy thời gian nhận phòng từ booking
+                    const checkinTime = upcomingBooking.checkinTime && Array.isArray(upcomingBooking.checkinTime) 
+                        ? new Date(
+                            upcomingBooking.checkinTime[0], 
+                            upcomingBooking.checkinTime[1] - 1, 
+                            upcomingBooking.checkinTime[2],
+                            upcomingBooking.checkinTime[3] || 0,
+                            upcomingBooking.checkinTime[4] || 0
+                        ) : null;
+                    
+                    if (checkinTime) {
+                        // Tính thời gian chênh lệch (ms)
+                        const timeDiff = Math.abs(now - checkinTime);
+                        
+                        // Chuyển đổi sang phút (5 phút = 5 * 60 * 1000 ms)
+                        const fiveMinutesInMs = 5 * 60 * 1000;
+                        
+                        if (timeDiff <= fiveMinutesInMs) {
+                            // Thời gian chênh lệch <= 5 phút, mở dialog để checkin
+                            console.log('Opening QuickBookingDialog for check-in within 5 minutes');
+                            setQuickBookingDialogOpen(true);
+                        } else {
+                            // Thời gian chênh lệch > 5 phút, mở dialog để đặt phòng
+                            console.log('Opening QuickBookingDialog for any room state');
+                            setQuickBookingDialogOpen(true);
+                        }
+                    } else {
+                        console.log('Invalid checkin time format, opening QuickBookingDialog');
+                        setQuickBookingDialogOpen(true);
+                    }
+                } else {
+                    // Tất cả các loại phòng khác - Hiển thị dialog đặt phòng nhanh
+                    console.log('Opening QuickBookingDialog for any room state');
+                    setQuickBookingDialogOpen(true);
+                }
             }
         } catch (err) {
             console.error('Lỗi xử lý phòng:', err);
@@ -258,7 +441,8 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
         event.stopPropagation(); // Ngăn không cho sự kiện lan tỏa lên card phòng
         console.log('Booking info clicked for room:', room.id);
         
-        if (room.bookings && room.bookings.length > 0) {
+        const upcomingBookings = room.bookings ? room.bookings.filter(booking => booking.roomStatusInBooking === 'UPCOMING') : [];
+        if (upcomingBookings.length > 0) {
             setSelectedRoom(room);
             setBookingListDialogOpen(true);
         }
@@ -322,10 +506,19 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                             const roomCategory = room.roomCategory || {};
                             
                             // Kiểm tra xem card có thể click được hay không
-                            const isClickable = room.status === 'IN_USE' || 
-                                               room.status === 'CHECKOUT_SOON' || 
-                                               room.status === 'OVERDUE' ||
-                                               (room.status === 'AVAILABLE' && room.isClean);
+                            const hasActiveBooking = room.bookings?.find(booking => 
+                                booking.roomStatusInBooking === 'IN_USE' || 
+                                booking.roomStatusInBooking === 'CHECKOUT_SOON' ||
+                                booking.roomStatusInBooking === 'OVERDUE'
+                            );
+                            
+                            const hasUpcomingBooking = room.bookings?.find(booking => 
+                                booking.roomStatusInBooking === 'UPCOMING'
+                            );
+                            
+                            const isClickable = hasActiveBooking || 
+                                              hasUpcomingBooking || 
+                                              (room.status === 'AVAILABLE' && room.isClean);
                             
                             // Console.log để debug
                             console.log(`Room ${room.id}: status=${room.status}, isClean=${room.isClean}, clickable=${isClickable}`);
@@ -363,9 +556,9 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                                     fontWeight: 'bold',
                                                 }}
                                             />
-                                            {room.bookings && room.bookings.length > 0 && (
+                                            {room.bookings && room.bookings.filter(booking => booking.roomStatusInBooking === 'UPCOMING').length > 0 && (
                                                 <Chip
-                                                    label={`Đặt trước: ${room.bookings.length}`}
+                                                    label={`Đặt trước: ${room.bookings.filter(booking => booking.roomStatusInBooking === 'UPCOMING').length}`}
                                                     size="small"
                                                     sx={{
                                                         backgroundColor: '#FFD700',
@@ -426,8 +619,83 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                             {room.roomCategory?.description || room.note || 'Không có mô tả'}
                                         </Typography>
                                         
+                                        {/* Hiển thị thông báo khi có booking đang sử dụng (IN_USE) */}
+                                        {room.bookings && room.bookings.find(booking => booking.roomStatusInBooking === 'IN_USE') && (
+                                            <Box
+                                                sx={{
+                                                    mb: 1,
+                                                    p: 1,
+                                                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                                                    borderRadius: 1,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        color: '#4caf50',
+                                                        fontWeight: 'medium',
+                                                        fontSize: '0.8rem',
+                                                    }}
+                                                >
+                                                    Phòng đang được sử dụng. Nhấn để xem chi tiết và thực hiện trả phòng.
+                                                </Typography>
+                                            </Box>
+                                        )}
+                                        
+                                        {/* Hiển thị thông báo khi có booking sắp trả (CHECKOUT_SOON) */}
+                                        {room.bookings && room.bookings.find(booking => booking.roomStatusInBooking === 'CHECKOUT_SOON') && (
+                                            <Box
+                                                sx={{
+                                                    mb: 1,
+                                                    p: 1,
+                                                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                                                    borderRadius: 1,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        color: '#2196f3',
+                                                        fontWeight: 'medium',
+                                                        fontSize: '0.8rem',
+                                                    }}
+                                                >
+                                                    Phòng sắp đến giờ trả. Nhấn để xem chi tiết và thực hiện thanh toán.
+                                                </Typography>
+                                            </Box>
+                                        )}
+                                        
+                                        {/* Hiển thị thông báo khi có booking quá hạn (OVERDUE) */}
+                                        {room.bookings && room.bookings.find(booking => booking.roomStatusInBooking === 'OVERDUE') && (
+                                            <Box
+                                                sx={{
+                                                    mb: 1,
+                                                    p: 1,
+                                                    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                                                    borderRadius: 1,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        color: '#f44336',
+                                                        fontWeight: 'medium',
+                                                        fontSize: '0.8rem',
+                                                    }}
+                                                >
+                                                    Phòng đã quá hạn trả. Nhấn để xem chi tiết và thực hiện thanh toán ngay.
+                                                </Typography>
+                                            </Box>
+                                        )}
+                                        
                                         {/* Hiển thị lịch đặt phòng sắp tới nếu có */}
-                                        {room.bookings && room.bookings.length > 0 && (
+                                        {room.bookings && room.bookings.filter(booking => booking.roomStatusInBooking === 'UPCOMING').length > 0 && (
                                             <Box 
                                                 sx={{ 
                                                     mb: 1, 
@@ -450,7 +718,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                                 >
                                                     Đặt phòng sắp tới:
                                                 </Typography>
-                                                {room.bookings.slice(0, 1).map((booking, idx) => {
+                                                {room.bookings.filter(booking => booking.roomStatusInBooking === 'UPCOMING').slice(0, 1).map((booking, idx) => {
                                                     // Định dạng thời gian checkin
                                                     const checkinTime = booking.checkinTime && Array.isArray(booking.checkinTime) 
                                                         ? new Date(
@@ -475,7 +743,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                                         </Typography>
                                                     );
                                                 })}
-                                                {room.bookings.length > 1 && (
+                                                {room.bookings.filter(booking => booking.roomStatusInBooking === 'UPCOMING').length > 1 && (
                                                     <Typography
                                                         variant="body2"
                                                         sx={{
@@ -483,7 +751,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                                             fontStyle: 'italic'
                                                         }}
                                                     >
-                                                        ... và {room.bookings.length - 1} đặt phòng khác
+                                                        ... và {room.bookings.filter(booking => booking.roomStatusInBooking === 'UPCOMING').length - 1} đặt phòng khác
                                                     </Typography>
                                                 )}
                                             </Box>
@@ -524,8 +792,11 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                         })}
                     </Box>
                 ) : (
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100% - 40px)', mt: 2 }}>
-                        <Typography variant="body1">Không có dữ liệu phòng để hiển thị.</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100% - 60px)', mt: 2 }}>
+                        <Typography variant="body1" sx={{ textAlign: 'center', color: '#555' }}>
+                            Không có phòng nào khớp với bộ lọc đã chọn. <br />
+                            Vui lòng chọn bộ lọc khác hoặc nhấn vào "Tất cả" để xem tất cả phòng.
+                        </Typography>
                     </Box>
                 )}
             </Box>
@@ -584,7 +855,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                     status: selectedRoom?.status,
                     isClean: selectedRoom?.isClean,
                 }}
-                bookings={selectedRoom?.bookings || []}
+                bookings={selectedRoom?.bookings ? selectedRoom.bookings.filter(booking => booking.roomStatusInBooking === 'UPCOMING') : []}
             />
         </Box>
     );
