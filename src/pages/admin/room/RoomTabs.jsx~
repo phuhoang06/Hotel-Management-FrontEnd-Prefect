@@ -483,7 +483,7 @@ export default function RoomTabs() {
                 onClose={handleCloseRoomDialog}
             />
 
-
+            
             <Grid container spacing={2.4} sx={{ minWidth: '960px' }}>
                 <Grid item xs={4}>
                     <Paper elevation={1} sx={{ p: 1.6, height: '100%' }}>
