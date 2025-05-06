@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Card, CardContent, Typography, Chip, IconButton, Menu, MenuItem } from '@mui/material';
+import { Box, Card, CardContent, Typography, Chip, IconButton, Menu, MenuItem, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import Brightness2Icon from '@mui/icons-material/Brightness2';
@@ -12,6 +12,7 @@ import RoomBookingService from "../../../service/roomBooking.service.js";
 import RoomDetailsDialog from './RoomDetailsDialog';
 import QuickBookingDialog from './QuickBookingDialog';
 import BookingListDialog from './BookingListDialog';
+import BookingDialog from './BookingDialog';
 
 export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeChange }) {
     const [anchorElSearch, setAnchorElSearch] = useState(null);
@@ -24,9 +25,12 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
     const [roomDetailsDialogOpen, setRoomDetailsDialogOpen] = useState(false);
     const [quickBookingDialogOpen, setQuickBookingDialogOpen] = useState(false);
     const [bookingListDialogOpen, setBookingListDialogOpen] = useState(false);
+    const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
     const [menuAnchorEl, setMenuAnchorEl] = useState(null);
     const [menuRoom, setMenuRoom] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [warningDialogOpen, setWarningDialogOpen] = useState(false);
+    const [warningMessage, setWarningMessage] = useState('');
 
     useEffect(() => {
         fetchRooms();
@@ -381,17 +385,32 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                     
                     if (checkinTime) {
                         // Tính thời gian chênh lệch (ms)
-                        const timeDiff = Math.abs(now - checkinTime);
+                        const timeDiff = checkinTime - now; // Thời gian đến lúc check-in
                         
-                        // Chuyển đổi sang phút (5 phút = 5 * 60 * 1000 ms)
-                        const fiveMinutesInMs = 5 * 60 * 1000;
+                        // Chuyển đổi sang giờ (1 giờ = 60 * 60 * 1000 ms)
+                        const oneHourInMs = 60 * 60 * 1000;
                         
-                        if (timeDiff <= fiveMinutesInMs) {
+                        // Tính thời gian 1 giờ sau thời gian hiện tại
+                        const oneHourAfterNow = new Date(now.getTime() + oneHourInMs);
+                        
+                        if (timeDiff > 0 && timeDiff < oneHourInMs) {
+                            // Thời gian hiện tại nhỏ hơn thời gian check-in khoảng 1 tiếng
+                            console.log('Cannot book or check-in: less than 1 hour before scheduled check-in time');
+                            // Hiển thị thông báo bằng dialog thay vì alert
+                            setWarningMessage('Không thể đặt phòng hoặc nhận phòng khi thời gian hiện tại ít hơn 1 giờ trước thời gian nhận phòng đã lên lịch.');
+                            setWarningDialogOpen(true);
+                            return; // Ngừng xử lý, không mở dialog
+                        } else if (timeDiff <= 0 && checkinTime >= new Date(now.getTime() - oneHourInMs)) {
+                            // Thời gian check-in đã đến hoặc đã qua, nhưng vẫn trong khoảng 1 giờ gần nhất
+                            console.log('Opening BookingDialog for check-in within the past hour');
+                            setBookingDialogOpen(true);
+                            return;
+                        } else if (timeDiff <= 5 * 60 * 1000 && timeDiff >= 0) {
                             // Thời gian chênh lệch <= 5 phút, mở dialog để checkin
                             console.log('Opening QuickBookingDialog for check-in within 5 minutes');
                             setQuickBookingDialogOpen(true);
                         } else {
-                            // Thời gian chênh lệch > 5 phút, mở dialog để đặt phòng
+                            // Thời gian chênh lệch > 5 phút hoặc đã qua thời gian check-in, mở dialog để đặt phòng
                             console.log('Opening QuickBookingDialog for any room state');
                             setQuickBookingDialogOpen(true);
                         }
@@ -451,6 +470,12 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
     // Đóng dialog danh sách đặt phòng
     const handleBookingListDialogClose = () => {
         setBookingListDialogOpen(false);
+    };
+
+    // Đóng dialog đặt phòng
+    const handleBookingDialogClose = () => {
+        setBookingDialogOpen(false);
+        refreshRoomData(); // Làm mới dữ liệu phòng sau khi đóng dialog
     };
 
     return (
@@ -856,6 +881,35 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                     isClean: selectedRoom?.isClean,
                 }}
                 bookings={selectedRoom?.bookings ? selectedRoom.bookings.filter(booking => booking.roomStatusInBooking === 'UPCOMING') : []}
+            />
+
+            {/* Dialog cảnh báo */}
+            <Dialog
+                open={warningDialogOpen}
+                onClose={() => setWarningDialogOpen(false)}
+                aria-labelledby="alert-dialog-title"
+                aria-describedby="alert-dialog-description"
+            >
+                <DialogTitle id="alert-dialog-title">
+                    {"Không thể đặt phòng"}
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText id="alert-dialog-description">
+                        {warningMessage}
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setWarningDialogOpen(false)} autoFocus>
+                        Đã hiểu
+                    </Button>
+                </DialogActions>
+            </Dialog>
+            
+            {/* Dialog đặt phòng khi thời gian check-in đã đến hoặc qua trong vòng 1 giờ */}
+            <BookingDialog 
+                open={bookingDialogOpen}
+                onClose={handleBookingDialogClose}
+                roomData={selectedRoom}
             />
         </Box>
     );
