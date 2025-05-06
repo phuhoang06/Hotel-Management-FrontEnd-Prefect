@@ -34,6 +34,18 @@ class RoomViewService {
         return await axiosInstance.post('/rooms', roomData);
     }
 
+    static async addRoomCategory(roomCategoryData, imageFile) {
+        const formData = new FormData();
+        formData.append('roomCategory', JSON.stringify(roomCategoryData));
+        if (imageFile) {
+            formData.append('img', imageFile);
+        }
+        return await axiosInstance.post('/room-categories', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+    }
     /**
      * Cập nhật thông tin phòng
      */

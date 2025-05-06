@@ -763,7 +763,7 @@ export default function RoomTabs() {
                                                                                         <strong>Giá qua đêm:</strong> {expandedRowDetails.overnightPrice?.toLocaleString() || 'N/A'} đ
                                                                                     </Typography>
                                                                                     <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
-                                                                                        <strong>Phí thuê giường:</strong> {expandedRowDetails.defaultExtraFee?.toLocaleString() || 'N/A'} đ
+                                                                                        <strong>phụ phí khác:</strong> {expandedRowDetails.defaultExtraFee?.toLocaleString() || 'N/A'} đ
                                                                                     </Typography>
                                                                                 </Grid>
                                                                             </Grid>
