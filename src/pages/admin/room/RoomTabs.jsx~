@@ -470,7 +470,6 @@ export default function RoomTabs() {
                 </Box>
             </Paper>
 
-            {/* Dialog  Thêm Hạng Phòng */}
             <AddRoomCategoryDialog
                 open={openRoomCategoryDialog}
                 onClose={handleCloseRoomCategoryDialog}
