@@ -1,4 +1,5 @@
-import * as React from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { Dialog, DialogActions, DialogContent, DialogTitle, MenuList, Popper } from "@mui/material";
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Box from '@mui/material/Box';
@@ -25,9 +26,9 @@ import { toast } from 'react-toastify';
 import RoomViewService from "../../../service/admin/room.service";
 import AddIcon from '@mui/icons-material/Add';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import {Dialog, DialogActions, DialogContent, DialogTitle, MenuList, Popper} from "@mui/material";
 import AddRoomCategoryDialog from "./AddRoomCategoryDialog.jsx";
 import AddRoomDialog from "./AddRoomDialog.jsx";
+import { debounce } from 'lodash';
 
 const placeholderImage = 'https://via.placeholder.com/200x150?text=No+Image';
 
@@ -67,6 +68,7 @@ export default function RoomTabs() {
     const [searchRoom, setSearchRoom] = React.useState('');
     const [categoryRoom, setCategoryRoom] = React.useState('');
     const [statusRoom, setStatusRoom] = React.useState('');
+    const [floorRoom, setFloorRoom] = React.useState('');
     const [selectedCategories, setSelectedCategories] = React.useState([]);
     const [expandedRow, setExpandedRow] = React.useState(null);
     const [expandedRowDetails, setExpandedRowDetails] = React.useState(null);
@@ -81,8 +83,6 @@ export default function RoomTabs() {
     const [totalRooms, setTotalRooms] = React.useState(0);
     const [mainImage, setMainImage] = React.useState(null);
 
-    // thêm const hover mở ra menuItem hạng phòng và phòng
-
     const [openAddMenu, setOpenAddMenu] = React.useState(false);
     const addButtonRef = React.useRef(null);
 
@@ -94,7 +94,6 @@ export default function RoomTabs() {
         setOpenAddMenu(false);
     }
 
-    // xử lý khi nhấn vào menuItem phòng và hạng  phòng
     const [openRoomCategoryDialog, setOpenRoomCategoryDialog] = React.useState(false);
     const [openRoomDialog, setOpenRoomDialog] = React.useState(false);
 
@@ -108,7 +107,6 @@ export default function RoomTabs() {
         setOpenRoomDialog(true);
     }
 
-    // Hàm đóng dialog
     const handleCloseRoomCategoryDialog = () => {
         setOpenRoomCategoryDialog(false);
     }
@@ -117,7 +115,7 @@ export default function RoomTabs() {
         setOpenRoomDialog(false);
     }
 
-    const filteredCategories = React.useCallback(async (currentPage = 0) => {
+    const filteredCategories = useCallback(async (currentPage = 0) => {
         try {
             setLoading(true);
             const status = statusCategory.active ? 'ACTIVE' : statusCategory.inactive ? 'INACTIVE' : '';
@@ -145,19 +143,20 @@ export default function RoomTabs() {
         }
     }, [searchCategory, statusCategory, recordsPerPage]);
 
-    const filteredRooms = React.useCallback(async (currentPage = 0) => {
+    const filteredRooms = useCallback(async (currentPage = 0) => {
         try {
             setLoading(true);
             const params = {
                 keyword: searchRoom,
-                status: statusRoom,
+                status: statusRoom || '',
                 categoryId: categoryRoom || '',
+                floor: floorRoom || '',
                 page: currentPage,
                 size: recordsPerPage,
             };
-            console.log('Tham số gửi đi:', params); // Debug log
+            console.log('Tham số gửi đi:', params);
             const response = await RoomViewService.searchRoomView(params);
-            console.log('Dữ liệu trả về:', response?.data); // Debug log
+            console.log('Dữ liệu trả về:', response?.data);
             if (response?.data?.content) {
                 setRooms(response.data.content);
                 setTotalRooms(response.data.totalElements || 0);
@@ -174,9 +173,9 @@ export default function RoomTabs() {
         } finally {
             setLoading(false);
         }
-    }, [searchRoom, statusRoom, categoryRoom, recordsPerPage]);
+    }, [searchRoom, statusRoom, categoryRoom, floorRoom, recordsPerPage]);
 
-    const fetchRoomCategories = React.useCallback(async () => {
+    const fetchRoomCategories = useCallback(async () => {
         try {
             setLoading(true);
             const response = await RoomViewService.getRoomCategories();
@@ -195,7 +194,7 @@ export default function RoomTabs() {
         }
     }, []);
 
-    const fetchRooms = React.useCallback(async (currentPage = 0) => {
+    const fetchRooms = useCallback(async (currentPage = 0) => {
         try {
             setLoading(true);
             const response = await RoomViewService.getAllRoomView(currentPage, recordsPerPage);
@@ -217,7 +216,7 @@ export default function RoomTabs() {
         }
     }, [recordsPerPage]);
 
-    const initializeData = React.useCallback(async () => {
+    const initializeData = useCallback(async () => {
         try {
             await Promise.all([fetchRoomCategories(), fetchRooms()]);
         } catch (err) {
@@ -226,20 +225,24 @@ export default function RoomTabs() {
         }
     }, [fetchRoomCategories, fetchRooms]);
 
-    React.useEffect(() => {
+    // Debounced functions
+    const debouncedFilteredCategories = useRef(debounce((currentPage) => filteredCategories(currentPage), 500)).current;
+    const debouncedFilteredRooms = useRef(debounce((currentPage) => filteredRooms(currentPage), 500)).current;
+
+    useEffect(() => {
         initializeData().catch((err) => console.error('Lỗi trong useEffect:', err));
     }, [initializeData]);
 
-    React.useEffect(() => {
+    useEffect(() => {
         const fetchData = async () => {
             if (value === 0) {
-                await filteredCategories(pageCategories);
+                await debouncedFilteredCategories(pageCategories);
             } else {
-                await filteredRooms(pageRooms);
+                await debouncedFilteredRooms(pageRooms);
             }
         };
         fetchData().catch((err) => console.error('Lỗi trong useEffect:', err));
-    }, [value, searchCategory, statusCategory, recordsPerPage, searchRoom, categoryRoom, statusRoom, filteredCategories, filteredRooms, pageCategories, pageRooms]);
+    }, [value, searchCategory, statusCategory, recordsPerPage, searchRoom, categoryRoom, statusRoom, floorRoom, pageCategories, pageRooms]);
 
     const handleChange = (event, newValue) => {
         setValue(newValue);
@@ -432,7 +435,6 @@ export default function RoomTabs() {
                             endIcon={<KeyboardArrowDownIcon />}
                             sx={{ fontSize: '0.7rem' }}
                             ref={addButtonRef}
-
                         >
                             Thêm mới
                         </Button>
@@ -464,25 +466,23 @@ export default function RoomTabs() {
                                         Thêm phòng
                                     </MenuItem>
                                 </MenuList>
-
                             </Box>
                         </Popper>
                     </Box>
                 </Box>
             </Paper>
 
-            {/* Dialog  Thêm Hạng Phòng */}
             <AddRoomCategoryDialog
                 open={openRoomCategoryDialog}
                 onClose={handleCloseRoomCategoryDialog}
+                onSuccess={() => filteredCategories(pageCategories)}
             />
 
-            {/* Dialog  ThêmPhòng */}
             <AddRoomDialog
                 open={openRoomDialog}
                 onClose={handleCloseRoomDialog}
+                onSuccess={() => filteredRooms(pageRooms)}
             />
-
 
             <Grid container spacing={2.4} sx={{ minWidth: '960px' }}>
                 <Grid item xs={4}>
@@ -493,7 +493,10 @@ export default function RoomTabs() {
                                     fullWidth
                                     label="Tìm kiếm hạng phòng"
                                     value={searchCategory}
-                                    onChange={(e) => setSearchCategory(e.target.value)}
+                                    onChange={(e) => {
+                                        setSearchCategory(e.target.value);
+                                        debouncedFilteredCategories(pageCategories);
+                                    }}
                                     sx={{ mb: 1.6 }}
                                     size="small"
                                 />
@@ -518,7 +521,6 @@ export default function RoomTabs() {
                                         variant="outlined"
                                         sx={{ fontSize: '0.7rem' }}
                                     >
-                                        <MenuItem value={3} sx={{ fontSize: '0.7rem' }}>3</MenuItem>
                                         <MenuItem value={5} sx={{ fontSize: '0.7rem' }}>5</MenuItem>
                                         <MenuItem value={10} sx={{ fontSize: '0.7rem' }}>10</MenuItem>
                                         <MenuItem value={15} sx={{ fontSize: '0.7rem' }}>15</MenuItem>
@@ -531,7 +533,10 @@ export default function RoomTabs() {
                                     fullWidth
                                     label="Tìm kiếm phòng"
                                     value={searchRoom}
-                                    onChange={(e) => setSearchRoom(e.target.value)}
+                                    onChange={(e) => {
+                                        setSearchRoom(e.target.value);
+                                        debouncedFilteredRooms(pageRooms);
+                                    }}
                                     sx={{ mb: 1.6 }}
                                     size="small"
                                 />
@@ -541,7 +546,8 @@ export default function RoomTabs() {
                                         value={categoryRoom}
                                         onChange={(e) => {
                                             setCategoryRoom(e.target.value === '' ? '' : e.target.value);
-                                            setPageRooms(0); // Reset page when filter changes
+                                            setPageRooms(0);
+                                            filteredRooms(pageRooms);
                                         }}
                                         label="Loại phòng"
                                         variant="outlined"
@@ -562,12 +568,34 @@ export default function RoomTabs() {
                                     </Select>
                                 </FormControl>
                                 <FormControl fullWidth sx={{ mb: 1.6 }} size="small">
+                                    <InputLabel sx={{ fontSize: '0.7rem' }}>Tầng</InputLabel>
+                                    <Select
+                                        value={floorRoom}
+                                        onChange={(e) => {
+                                            setFloorRoom(e.target.value === '' ? '' : e.target.value);
+                                            setPageRooms(0);
+                                            filteredRooms(pageRooms);
+                                        }}
+                                        label="Tầng"
+                                        variant="outlined"
+                                        sx={{ fontSize: '0.7rem' }}
+                                    >
+                                        <MenuItem value="" sx={{ fontSize: '0.7rem' }}>Tất cả</MenuItem>
+                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((floor) => (
+                                            <MenuItem key={floor} value={floor} sx={{ fontSize: '0.7rem' }}>
+                                                Tầng {floor}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                                <FormControl fullWidth sx={{ mb: 1.6 }} size="small">
                                     <InputLabel sx={{ fontSize: '0.7rem' }}>Tình trạng</InputLabel>
                                     <Select
                                         value={statusRoom}
                                         onChange={(e) => {
                                             setStatusRoom(e.target.value);
-                                            setPageRooms(0); // Reset page when filter changes
+                                            setPageRooms(0);
+                                            filteredRooms(pageRooms);
                                         }}
                                         label="Tình trạng"
                                         variant="outlined"
@@ -591,7 +619,6 @@ export default function RoomTabs() {
                                         variant="outlined"
                                         sx={{ fontSize: '0.7rem' }}
                                     >
-                                        <MenuItem value={3} sx={{ fontSize: '0.7rem' }}>3</MenuItem>
                                         <MenuItem value={5} sx={{ fontSize: '0.7rem' }}>5</MenuItem>
                                         <MenuItem value={10} sx={{ fontSize: '0.7rem' }}>10</MenuItem>
                                         <MenuItem value={15} sx={{ fontSize: '0.7rem' }}>15</MenuItem>
@@ -763,7 +790,7 @@ export default function RoomTabs() {
                                                                                         <strong>Giá qua đêm:</strong> {expandedRowDetails.overnightPrice?.toLocaleString() || 'N/A'} đ
                                                                                     </Typography>
                                                                                     <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
-                                                                                        <strong>phụ phí khác:</strong> {expandedRowDetails.defaultExtraFee?.toLocaleString() || 'N/A'} đ
+                                                                                        <strong>Phụ phí khác:</strong> {expandedRowDetails.defaultExtraFee?.toLocaleString() || 'N/A'} đ
                                                                                     </Typography>
                                                                                 </Grid>
                                                                             </Grid>
@@ -821,7 +848,7 @@ export default function RoomTabs() {
                                 onPageChange={handleCategoriesPageChange}
                                 rowsPerPage={recordsPerPage}
                                 onRowsPerPageChange={handleRowsPerPageChange}
-                                rowsPerPageOptions={[3, 5, 10, 15]}
+                                rowsPerPageOptions={[5, 10, 15]}
                                 sx={{ fontSize: '0.6rem' }}
                             />
                         </CustomTabPanel>
@@ -1003,7 +1030,7 @@ export default function RoomTabs() {
                                 onPageChange={handleRoomsPageChange}
                                 rowsPerPage={recordsPerPage}
                                 onRowsPerPageChange={handleRowsPerPageChange}
-                                rowsPerPageOptions={[3, 5, 10, 15]}
+                                rowsPerPageOptions={[5, 10, 15]}
                                 sx={{ fontSize: '0.6rem' }}
                             />
                         </CustomTabPanel>

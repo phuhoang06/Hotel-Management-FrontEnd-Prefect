@@ -85,7 +85,7 @@ const validationSchema = Yup.object({
         .test("fileType", "Chỉ hỗ trợ định dạng JPG, PNG", (value) => !value || ["image/jpeg", "image/png"].includes(value.type)),
 });
 
-function AddRoomCategoryDialog({ open, onClose }) {
+function AddRoomCategoryDialog({ open, onClose, onSuccess }) {
     const initialValues = {
         code: "",
         name: "",
@@ -132,6 +132,7 @@ function AddRoomCategoryDialog({ open, onClose }) {
             resetForm();
             fileInputRef.current.value = null; // Reset file input
             onClose();
+            if (onSuccess) onSuccess(); // Gọi callback để làm mới danh sách
         } catch (error) {
             console.error("Lỗi khi thêm hạng phòng:", error);
             toast.error(error.message || "Không thể thêm hạng phòng");
