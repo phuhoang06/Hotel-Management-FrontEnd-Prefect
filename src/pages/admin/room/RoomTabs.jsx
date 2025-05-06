@@ -416,18 +416,6 @@ export default function RoomTabs() {
                 </Box>
             )}
 
-            {/*<Paper elevation={2} sx={{ mb: 2.4, minWidth: '960px' }}>*/}
-            {/*    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: 1, borderColor: 'divider', px: 1.6 }}>*/}
-            {/*        <Tabs value={value} onChange={handleChange} aria-label="room tabs">*/}
-            {/*            <Tab label="Hạng phòng" {...a11yProps(0)} sx={{ py: 1.6 }} />*/}
-            {/*            <Tab label="Danh sách phòng" {...a11yProps(1)} sx={{ py: 1.6 }} />*/}
-            {/*        </Tabs>*/}
-            {/*        <Button variant="contained" color="success" startIcon={<span>+</span>} sx={{ fontSize: '0.7rem' }}>*/}
-            {/*            Thêm mới*/}
-            {/*        </Button>*/}
-            {/*    </Box>*/}
-            {/*</Paper>*/}
-
             <Paper elevation={2} sx={{ mb: 2.4, minWidth: '960px' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: 1, borderColor: 'divider', px: 1.6 }}>
                     <Tabs value={value} onChange={handleChange} aria-label="room tabs">
