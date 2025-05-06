@@ -1,29 +1,22 @@
-import {axiosInstance} from "../../configs/axios.config.js";
+import { axiosInstance } from "../../configs/axios.config.js";
 
 class RoomViewService {
     /**
      * Lấy tất cả phòng
      */
-    static async getAllRoomView(page = 0, size = 10) {
+    static async getAllRoomView(page = 0, size = 3) {
         return await axiosInstance.get(`/rooms?page=${page}&size=${size}`);
     }
 
     /**
      * Tìm kiếm phòng theo điều kiện
-     * @param {Object} params - Các tham số tìm kiếm
-     * @param {string} params.keyword - Từ khóa tìm kiếm (số phòng, tầng)
-     * @param {string} params.status - Trạng thái phòng (AVAILABLE, IN_USE, CHECKOUT_SOON, MAINTENANCE)
-     * @param {string} params.floor - Tầng
-     * @param {number} params.page - Số trang (mặc định là 0)
-     * @param {number} params.size - Kích thước trang (mặc định là 10)
      */
-    static async searchRoomView({ keyword = "", status = "", floor = "", page = 0, size = 10 }) {
+    static async searchRoomView({ keyword = "", status = "", floor = "", categoryId = "", page = 0, size = 10 }) {
         let query = `/rooms/search?page=${page}&size=${size}`;
-        
         if (keyword) query += `&keyword=${encodeURIComponent(keyword)}`;
         if (status) query += `&status=${status}`;
         if (floor) query += `&floor=${floor}`;
-        
+        if (categoryId) query += `&categoryId=${categoryId}`;
         return await axiosInstance.get(query);
     }
 
@@ -61,7 +54,56 @@ class RoomViewService {
     static async getRoomCategories() {
         return await axiosInstance.get('/room-categories');
     }
-    
+
+    /**
+     * Lấy chi tiết loại phòng theo ID
+     */
+    static async getRoomCategoryById(id) {
+        return await axiosInstance.get(`/room-categories/${id}`);
+    }
+
+    /**
+     * Tìm kiếm loại phòng theo điều kiện
+     */
+    static async searchRoomCategories({
+                                          keyword = "",
+                                          status = "",
+                                          minHourlyPrice = "",
+                                          maxHourlyPrice = "",
+                                          minDailyPrice = "",
+                                          maxDailyPrice = "",
+                                          minOvernightPrice = "",
+                                          maxOvernightPrice = "",
+                                          page = 0,
+                                          size = 10
+                                      }) {
+        let query = `/room-categories/search?page=${page}&size=${size}`;
+        if (keyword) query += `&keyword=${encodeURIComponent(keyword)}`;
+        if (status) query += `&status=${status}`;
+        if (minHourlyPrice) query += `&minHourlyPrice=${minHourlyPrice}`;
+        if (maxHourlyPrice) query += `&maxHourlyPrice=${maxHourlyPrice}`;
+        if (minDailyPrice) query += `&minDailyPrice=${minDailyPrice}`;
+        if (maxDailyPrice) query += `&maxDailyPrice=${maxDailyPrice}`;
+        if (minOvernightPrice) query += `&minOvernightPrice=${minOvernightPrice}`;
+        if (maxOvernightPrice) query += `&maxOvernightPrice=${maxOvernightPrice}`;
+        return await axiosInstance.get(query);
+    }
+
+    /**
+     * Xóa loại phòng
+     */
+    static async deleteRoomCategory(id) {
+        return await axiosInstance.delete(`/room-categories/${id}/delete`);
+    }
+
+    /**
+     * Cập nhật trạng thái loại phòng (Ngừng kinh doanh)
+     * Note: API này hiện chưa có trong backend, cần thêm.
+     */
+    static async updateRoomCategoryStatus(id, status) {
+        return await axiosInstance.patch(`/room-categories/${id}/status`, { status });
+    }
+
     /**
      * Cập nhật trạng thái phòng
      */
