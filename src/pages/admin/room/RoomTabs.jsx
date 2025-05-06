@@ -1,37 +1,41 @@
-import React, { useCallback, useEffect, useRef } from 'react';
-import { Dialog, DialogActions, DialogContent, DialogTitle, MenuList, Popper } from "@mui/material";
-import Tabs from '@mui/material/Tabs';
-import Tab from '@mui/material/Tab';
-import Box from '@mui/material/Box';
-import Grid from '@mui/material/Grid';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import TablePagination from '@mui/material/TablePagination';
-import TableContainer from '@mui/material/TableContainer';
-import TextField from '@mui/material/TextField';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import Checkbox from '@mui/material/Checkbox';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Button from '@mui/material/Button';
-import Typography from '@mui/material/Typography';
-import CircularProgress from '@mui/material/CircularProgress';
-import Paper from '@mui/material/Paper';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    Box,
+    Button,
+    Checkbox,
+    CircularProgress,
+    FormControl,
+    FormControlLabel,
+    Grid,
+    InputLabel,
+    MenuItem,
+    MenuList,
+    Paper,
+    Popper,
+    Select,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TablePagination,
+    TableRow,
+    Tabs,
+    Tab,
+    TextField,
+    Typography,
+} from '@mui/material';
 import { toast } from 'react-toastify';
-import RoomViewService from "../../../service/admin/room.service";
+import RoomViewService from '../../../service/admin/room.service';
 import AddIcon from '@mui/icons-material/Add';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import AddRoomCategoryDialog from "./AddRoomCategoryDialog.jsx";
-import AddRoomDialog from "./AddRoomDialog.jsx";
+import AddRoomCategoryDialog from './AddRoomCategoryDialog.jsx';
+import AddRoomDialog from './AddRoomDialog.jsx';
 import { debounce } from 'lodash';
 
 const placeholderImage = 'https://via.placeholder.com/200x150?text=No+Image';
 
+// Hàm hỗ trợ tạo thuộc tính accessibility cho tab
 function a11yProps(index) {
     return {
         id: `simple-tab-${index}`,
@@ -39,221 +43,222 @@ function a11yProps(index) {
     };
 }
 
-function CustomTabPanel(props) {
-    const { children, value, index, ...other } = props;
-
+// Component TabPanel tùy chỉnh để hiển thị nội dung tab
+function CustomTabPanel({ children, value, index, ...other }) {
     return (
         <div
             role="tabpanel"
+            hidden={value !== index}
             id={`simple-tabpanel-${index}`}
             aria-labelledby={`simple-tab-${index}`}
-            style={{
-                opacity: value === index ? 1 : 0,
-                transition: 'opacity 0.24s ease-in-out',
-                minHeight: '320px',
-                display: value === index ? 'block' : 'none',
-            }}
             {...other}
         >
-            <Box sx={{ p: 1.6 }}>{children}</Box>
+            {value === index && <Box sx={{ p: 1 }}>{children}</Box>}
         </div>
     );
 }
 
 export default function RoomTabs() {
-    const [value, setValue] = React.useState(0);
-    const [searchCategory, setSearchCategory] = React.useState('');
-    const [statusCategory, setStatusCategory] = React.useState({ active: true, inactive: false });
-    const [recordsPerPage, setRecordsPerPage] = React.useState(3);
-    const [searchRoom, setSearchRoom] = React.useState('');
-    const [categoryRoom, setCategoryRoom] = React.useState('');
-    const [statusRoom, setStatusRoom] = React.useState('');
-    const [floorRoom, setFloorRoom] = React.useState('');
-    const [selectedCategories, setSelectedCategories] = React.useState([]);
-    const [expandedRow, setExpandedRow] = React.useState(null);
-    const [expandedRowDetails, setExpandedRowDetails] = React.useState(null);
-    const [expandedRoomRow, setExpandedRoomRow] = React.useState(null);
-    const [expandedRoomDetails, setExpandedRoomDetails] = React.useState(null);
-    const [roomCategories, setRoomCategories] = React.useState([]);
-    const [rooms, setRooms] = React.useState([]);
-    const [loading, setLoading] = React.useState(false);
-    const [pageCategories, setPageCategories] = React.useState(0);
-    const [totalCategories, setTotalCategories] = React.useState(0);
-    const [pageRooms, setPageRooms] = React.useState(0);
-    const [totalRooms, setTotalRooms] = React.useState(0);
-    const [mainImage, setMainImage] = React.useState(null);
+    // Trạng thái tab hiện tại (0: Hạng phòng, 1: Danh sách phòng)
+    const [value, setValue] = useState(0);
+    // Tìm kiếm hạng phòng
+    const [searchCategory, setSearchCategory] = useState('');
+    // Trạng thái hạng phòng (Đang/Ngừng kinh doanh)
+    const [statusCategory, setStatusCategory] = useState({ active: true, inactive: false });
+    // Tìm kiếm phòng
+    const [searchRoom, setSearchRoom] = useState('');
+    // Bộ lọc hạng phòng
+    const [categoryRoom, setCategoryRoom] = useState('');
+    // Bộ lọc trạng thái phòng
+    const [statusRoom, setStatusRoom] = useState('');
+    // Bộ lọc tầng
+    const [floorRoom, setFloorRoom] = useState('');
+    // Danh sách hạng phòng được chọn
+    const [selectedCategories, setSelectedCategories] = useState([]);
+    // Hạng phòng đang mở rộng
+    const [expandedRow, setExpandedRow] = useState(null);
+    // Chi tiết hạng phòng mở rộng
+    const [expandedRowDetails, setExpandedRowDetails] = useState(null);
+    // Phòng đang mở rộng
+    const [expandedRoomRow, setExpandedRoomRow] = useState(null);
+    // Chi tiết phòng mở rộng
+    const [expandedRoomDetails, setExpandedRoomDetails] = useState(null);
+    // Danh sách hạng phòng
+    const [roomCategories, setRoomCategories] = useState([]);
+    // Danh sách phòng
+    const [rooms, setRooms] = useState([]);
+    // Trạng thái tải dữ liệu
+    const [loading, setLoading] = useState(false);
+    // Trang hiện tại (dùng chung cho cả hai tab)
+    const [page, setPage] = useState(0);
+    // Tổng số bản ghi
+    const [totalRecords, setTotalRecords] = useState(0);
+    // Số bản ghi mỗi trang
+    const [recordsPerPage, setRecordsPerPage] = useState(5);
+    // Ảnh chính khi xem chi tiết phòng
+    const [mainImage, setMainImage] = useState(null);
+    // Menu thêm mới
+    const [openAddMenu, setOpenAddMenu] = useState(false);
+    const addButtonRef = useRef(null);
+    // Dialog thêm hạng phòng
+    const [openRoomCategoryDialog, setOpenRoomCategoryDialog] = useState(false);
+    // Dialog thêm phòng
+    const [openRoomDialog, setOpenRoomDialog] = useState(false);
+    // Trạng thái tải danh sách hạng phòng
+    const [loadingCategories, setLoadingCategories] = useState(false);
 
-    const [openAddMenu, setOpenAddMenu] = React.useState(false);
-    const addButtonRef = React.useRef(null);
+    // Xử lý mở/đóng menu thêm mới
+    const handleAddMouseEnter = () => setOpenAddMenu(true);
+    const handleAddMouseLeave = () => setOpenAddMenu(false);
 
-    const handleAddMouseEnter = () => {
-        setOpenAddMenu(true);
-    }
-
-    const handleAddMouseLeave = () => {
-        setOpenAddMenu(false);
-    }
-
-    const [openRoomCategoryDialog, setOpenRoomCategoryDialog] = React.useState(false);
-    const [openRoomDialog, setOpenRoomDialog] = React.useState(false);
-
+    // Mở dialog thêm hạng phòng
     const handleAddRoomCategory = () => {
         setOpenRoomCategoryDialog(true);
         setOpenAddMenu(false);
-    }
+    };
 
+    // Mở dialog thêm phòng
     const handleAddRoom = () => {
-        setOpenAddMenu(false);
         setOpenRoomDialog(true);
-    }
+        setOpenAddMenu(false);
+    };
 
-    const handleCloseRoomCategoryDialog = () => {
-        setOpenRoomCategoryDialog(false);
-    }
+    // Đóng dialog thêm hạng phòng
+    const handleCloseRoomCategoryDialog = () => setOpenRoomCategoryDialog(false);
 
-    const handleCloseRoomDialog = () => {
-        setOpenRoomDialog(false);
-    }
+    // Đóng dialog thêm phòng
+    const handleCloseRoomDialog = () => setOpenRoomDialog(false);
 
-    const filteredCategories = useCallback(async (currentPage = 0) => {
-        try {
-            setLoading(true);
-            const status = statusCategory.active ? 'ACTIVE' : statusCategory.inactive ? 'INACTIVE' : '';
-            const response = await RoomViewService.searchRoomCategories({
-                keyword: searchCategory,
-                status,
-                page: currentPage,
-                size: recordsPerPage,
-            });
-            if (response?.data?.content) {
-                setRoomCategories(response.data.content);
-                setTotalCategories(response.data.totalElements || 0);
-            } else {
-                setRoomCategories([]);
-                setTotalCategories(0);
-                toast.error('Không có dữ liệu hạng phòng trả về');
-            }
-        } catch (err) {
-            console.error('Lỗi khi tìm kiếm hạng phòng:', err);
-            setRoomCategories([]);
-            setTotalCategories(0);
-            toast.error(`Không thể tìm kiếm hạng phòng: ${err.message}`);
-        } finally {
-            setLoading(false);
-        }
-    }, [searchCategory, statusCategory, recordsPerPage]);
-
-    const filteredRooms = useCallback(async (currentPage = 0) => {
-        try {
-            setLoading(true);
-            const params = {
-                keyword: searchRoom,
-                status: statusRoom || '',
-                categoryId: categoryRoom || '',
-                floor: floorRoom || '',
-                page: currentPage,
-                size: recordsPerPage,
-            };
-            console.log('Tham số gửi đi:', params);
-            const response = await RoomViewService.searchRoomView(params);
-            console.log('Dữ liệu trả về:', response?.data);
-            if (response?.data?.content) {
-                setRooms(response.data.content);
-                setTotalRooms(response.data.totalElements || 0);
-            } else {
-                setRooms([]);
-                setTotalRooms(0);
-                toast.info('Không có phòng nào khớp với bộ lọc');
-            }
-        } catch (err) {
-            console.error('Lỗi khi tìm kiếm phòng:', err);
-            setRooms([]);
-            setTotalRooms(0);
-            toast.error(`Không thể tìm kiếm phòng: ${err.message}`);
-        } finally {
-            setLoading(false);
-        }
-    }, [searchRoom, statusRoom, categoryRoom, floorRoom, recordsPerPage]);
-
+    // Tải danh sách hạng phòng ban đầu
     const fetchRoomCategories = useCallback(async () => {
         try {
-            setLoading(true);
+            setLoadingCategories(true);
             const response = await RoomViewService.getRoomCategories();
             if (response?.data) {
                 setRoomCategories(response.data);
             } else {
                 setRoomCategories([]);
-                toast.error('Không có dữ liệu hạng phòng trả về');
+                toast.info('Không có dữ liệu hạng phòng');
             }
         } catch (err) {
             console.error('Lỗi khi tải danh sách hạng phòng:', err);
             setRoomCategories([]);
             toast.error(`Không thể tải danh sách hạng phòng: ${err.message}`);
         } finally {
-            setLoading(false);
+            setLoadingCategories(false);
         }
     }, []);
 
-    const fetchRooms = useCallback(async (currentPage = 0) => {
-        try {
-            setLoading(true);
-            const response = await RoomViewService.getAllRoomView(currentPage, recordsPerPage);
-            if (response?.data?.content) {
-                setRooms(response.data.content);
-                setTotalRooms(response.data.totalElements || 0);
-            } else {
-                setRooms([]);
-                setTotalRooms(0);
-                toast.error('Không có dữ liệu phòng trả về');
+    // Tìm kiếm và lọc hạng phòng
+    const filteredCategories = useCallback(
+        async (currentPage = 0) => {
+            try {
+                setLoading(true);
+                const status = statusCategory.active ? 'ACTIVE' : statusCategory.inactive ? 'INACTIVE' : '';
+                const response = await RoomViewService.searchRoomCategories({
+                    keyword: searchCategory,
+                    status,
+                    page: currentPage,
+                    size: recordsPerPage,
+                });
+                if (response?.data?.content) {
+                    setRoomCategories(response.data.content);
+                    setTotalRecords(response.data.totalElements || 0);
+                } else {
+                    setRoomCategories([]);
+                    setTotalRecords(0);
+                    toast.info('Không có dữ liệu hạng phòng phù hợp');
+                }
+            } catch (err) {
+                console.error('Lỗi khi tìm kiếm hạng phòng:', err);
+                setRoomCategories([]);
+                setTotalRecords(0);
+                toast.error(`Không thể tìm kiếm hạng phòng: ${err.message}`);
+            } finally {
+                setLoading(false);
             }
-        } catch (err) {
-            console.error('Lỗi khi tải danh sách phòng:', err);
-            setRooms([]);
-            setTotalRooms(0);
-            toast.error(`Không thể tải danh sách phòng: ${err.message}`);
-        } finally {
-            setLoading(false);
-        }
-    }, [recordsPerPage]);
+        },
+        [searchCategory, statusCategory, recordsPerPage]
+    );
 
+    // Tìm kiếm và lọc phòng
+    const filteredRooms = useCallback(
+        async (currentPage = 0) => {
+            try {
+                setLoading(true);
+                const params = {
+                    keyword: searchRoom,
+                    status: statusRoom || '',
+                    categoryId: categoryRoom || '',
+                    floor: floorRoom || '',
+                    page: currentPage,
+                    size: recordsPerPage,
+                };
+                const response = await RoomViewService.searchRoomView(params);
+                if (response?.data?.content) {
+                    setRooms(response.data.content);
+                    setTotalRecords(response.data.totalElements || 0);
+                } else {
+                    setRooms([]);
+                    setTotalRecords(0);
+                    toast.info('Không có phòng nào phù hợp');
+                }
+            } catch (err) {
+                console.error('Lỗi khi tìm kiếm phòng:', err);
+                setRooms([]);
+                setTotalRecords(0);
+                toast.error(`Không thể tìm kiếm phòng: ${err.message}`);
+            } finally {
+                setLoading(false);
+            }
+        },
+        [searchRoom, statusRoom, categoryRoom, floorRoom, recordsPerPage]
+    );
+
+    // Khởi tạo dữ liệu khi component mount
     const initializeData = useCallback(async () => {
         try {
-            await Promise.all([fetchRoomCategories(), fetchRooms()]);
+            setLoading(true);
+            await fetchRoomCategories();
+            if (value === 0) {
+                await filteredCategories(0);
+            } else {
+                await filteredRooms(0);
+            }
         } catch (err) {
             console.error('Lỗi khi khởi tạo dữ liệu:', err);
             toast.error('Không thể khởi tạo dữ liệu');
+        } finally {
+            setLoading(false);
         }
-    }, [fetchRoomCategories, fetchRooms]);
+    }, [fetchRoomCategories, filteredCategories, filteredRooms, value]);
 
-    // Debounced functions
+    // Debounce chỉ áp dụng cho tìm kiếm văn bản
     const debouncedFilteredCategories = useRef(debounce((currentPage) => filteredCategories(currentPage), 500)).current;
     const debouncedFilteredRooms = useRef(debounce((currentPage) => filteredRooms(currentPage), 500)).current;
 
+    // Khởi tạo dữ liệu khi component mount
     useEffect(() => {
-        initializeData().catch((err) => console.error('Lỗi trong useEffect:', err));
+        initializeData();
     }, [initializeData]);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            if (value === 0) {
-                await debouncedFilteredCategories(pageCategories);
-            } else {
-                await debouncedFilteredRooms(pageRooms);
-            }
-        };
-        fetchData().catch((err) => console.error('Lỗi trong useEffect:', err));
-    }, [value, searchCategory, statusCategory, recordsPerPage, searchRoom, categoryRoom, statusRoom, floorRoom, pageCategories, pageRooms]);
-
+    // Xử lý chuyển tab
     const handleChange = (event, newValue) => {
         setValue(newValue);
+        setPage(0);
         setExpandedRow(null);
         setExpandedRowDetails(null);
         setExpandedRoomRow(null);
         setExpandedRoomDetails(null);
         setSelectedCategories([]);
         setMainImage(null);
+        setCategoryRoom(''); // Reset bộ lọc loại phòng khi chuyển tab
+        setSearchRoom('');
+        setStatusRoom('');
+        setFloorRoom('');
     };
 
+    // Xử lý click vào hàng hạng phòng
     const handleRowClick = async (category) => {
         if (expandedRow === category.id) {
             setExpandedRow(null);
@@ -265,15 +270,16 @@ export default function RoomTabs() {
                 const response = await RoomViewService.getRoomCategoryById(category.id);
                 setExpandedRowDetails(response?.data || null);
             } catch (err) {
-                console.error('Lỗi khi tải thông tin chi tiết hạng phòng:', err);
+                console.error('Lỗi khi tải chi tiết hạng phòng:', err);
                 setExpandedRowDetails(null);
-                toast.error(`Không thể tải thông tin chi tiết hạng phòng: ${err.message}`);
+                toast.error(`Không thể tải chi tiết hạng phòng: ${err.message}`);
             } finally {
                 setLoading(false);
             }
         }
     };
 
+    // Xử lý click vào hàng phòng
     const handleRoomRowClick = async (room) => {
         if (expandedRoomRow === room.id) {
             setExpandedRoomRow(null);
@@ -288,42 +294,44 @@ export default function RoomTabs() {
                 setExpandedRoomDetails(roomDetails);
                 setMainImage(roomDetails.img1 || placeholderImage);
             } catch (err) {
-                console.error('Lỗi khi tải thông tin chi tiết phòng:', err);
+                console.error('Lỗi khi tải chi tiết phòng:', err);
                 setExpandedRoomDetails(room);
                 setMainImage(room.img1 || placeholderImage);
-                toast.error(`Không thể tải thông tin chi tiết phòng: ${err.message}`);
+                toast.error(`Không thể tải chi tiết phòng: ${err.message}`);
             } finally {
                 setLoading(false);
             }
         }
     };
 
+    // Xử lý click vào ảnh thumbnail
     const handleThumbnailClick = (img) => {
         setMainImage(img);
     };
 
+    // Xử lý chọn checkbox hạng phòng
     const handleCheckboxChange = (categoryId) => {
         setSelectedCategories((prev) =>
-            prev.includes(categoryId)
-                ? prev.filter((id) => id !== categoryId)
-                : [...prev, categoryId]
+            prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId]
         );
     };
 
+    // Xử lý cập nhật hạng phòng
     const handleUpdate = (category, e) => {
         e?.stopPropagation();
-        alert(`Điều hướng đến form chỉnh sửa hạng phòng: ${category.id}`);
+        alert(`Chuyển đến form chỉnh sửa hạng phòng: ${category.id}`);
     };
 
+    // Xử lý ngừng kinh doanh hạng phòng
     const handleDeactivate = async (category, e) => {
         e?.stopPropagation();
         try {
             setLoading(true);
             await RoomViewService.updateRoomCategoryStatus(category.id, 'INACTIVE');
-            await filteredCategories(pageCategories);
+            await filteredCategories(page);
             setExpandedRow(null);
             setExpandedRowDetails(null);
-            toast.success('Đã ngừng kinh doanh hạng phòng thành công');
+            toast.success('Ngừng kinh doanh hạng phòng thành công');
         } catch (err) {
             console.error('Lỗi khi ngừng kinh doanh hạng phòng:', err);
             toast.error(`Không thể ngừng kinh doanh hạng phòng: ${err.message}`);
@@ -332,15 +340,16 @@ export default function RoomTabs() {
         }
     };
 
+    // Xử lý xóa hạng phòng
     const handleDelete = async (category, e) => {
         e?.stopPropagation();
         try {
             setLoading(true);
             await RoomViewService.deleteRoomCategory(category.id);
-            await filteredCategories(pageCategories);
+            await filteredCategories(page);
             setExpandedRow(null);
             setExpandedRowDetails(null);
-            toast.success('Đã xóa hạng phòng thành công');
+            toast.success('Xóa hạng phòng thành công');
         } catch (err) {
             console.error('Lỗi khi xóa hạng phòng:', err);
             toast.error(`Không thể xóa hạng phòng: ${err.message}`);
@@ -349,31 +358,63 @@ export default function RoomTabs() {
         }
     };
 
-    const handleCategoriesPageChange = (event, newPage) => {
-        setPageCategories(newPage);
-        setExpandedRow(null);
-        setExpandedRowDetails(null);
+    // Xử lý cập nhật phòng
+    const handleRoomUpdate = (room, e) => {
+        e?.stopPropagation();
+        alert(`Chuyển đến form chỉnh sửa phòng: ${room.id}`);
     };
 
-    const handleRoomsPageChange = (event, newPage) => {
-        setPageRooms(newPage);
-        setExpandedRoomRow(null);
-        setExpandedRoomDetails(null);
-        setMainImage(null);
+    // Xử lý xóa phòng
+    const handleRoomDelete = async (room, e) => {
+        e?.stopPropagation();
+        if (window.confirm(`Bạn có chắc muốn xóa phòng ${room.id}?`)) {
+            try {
+                setLoading(true);
+                await RoomViewService.deleteRoom(room.id);
+                await filteredRooms(page);
+                setExpandedRoomRow(null);
+                setExpandedRoomDetails(null);
+                toast.success('Xóa phòng thành công');
+            } catch (err) {
+                console.error('Lỗi khi xóa phòng:', err);
+                let errorMessage = `Không thể xóa phòng: ${err.message}`;
+                if (err.response?.status === 400) {
+                    errorMessage = err.response.data.message || 'Dữ liệu không hợp lệ';
+                } else if (err.response?.status === 403) {
+                    errorMessage = 'Bạn không có quyền xóa phòng';
+                } else if (err.response?.status === 404) {
+                    errorMessage = 'Phòng không tồn tại';
+                }
+                toast.error(errorMessage);
+            } finally {
+                setLoading(false);
+            }
+        }
     };
 
+    // Xử lý thay đổi trang
+    const handlePageChange = (event, newPage) => {
+        setPage(newPage);
+        if (value === 0) {
+            filteredCategories(newPage);
+        } else {
+            filteredRooms(newPage);
+        }
+    };
+
+    // Xử lý thay đổi số bản ghi mỗi trang
     const handleRowsPerPageChange = (event) => {
         const newRecordsPerPage = parseInt(event.target.value, 10);
         setRecordsPerPage(newRecordsPerPage);
-        setPageCategories(0);
-        setPageRooms(0);
-        setExpandedRow(null);
-        setExpandedRowDetails(null);
-        setExpandedRoomRow(null);
-        setExpandedRoomDetails(null);
-        setMainImage(null);
+        setPage(0);
+        if (value === 0) {
+            filteredCategories(0);
+        } else {
+            filteredRooms(0);
+        }
     };
 
+    // Hàm lấy nhãn trạng thái phòng
     const getRoomStatusLabel = (status) => {
         switch (status) {
             case 'AVAILABLE':
@@ -393,6 +434,7 @@ export default function RoomTabs() {
         }
     };
 
+    // Cột cho bảng hạng phòng
     const categoriesColumns = [
         { id: 'checkbox', label: '', width: '32px' },
         { id: 'code', label: 'Mã hạng phòng', width: '96px' },
@@ -405,27 +447,31 @@ export default function RoomTabs() {
         { id: 'actions', label: 'Chỉnh sửa', width: '96px' },
     ];
 
+    // Cột cho bảng phòng
     const roomsColumns = [
         { id: 'id', label: 'Mã phòng', width: '80px' },
         { id: 'category', label: 'Hạng phòng', width: '144px' },
         { id: 'floor', label: 'Tầng', width: '64px' },
         { id: 'status', label: 'Tình trạng', width: '120px' },
         { id: 'clean', label: 'Trạng thái dọn dẹp', width: '144px' },
+        { id: 'actions', label: 'Hành động', width: '160px' }, // Thêm cột hành động
     ];
 
     return (
-        <Box sx={{ width: '100%', fontSize: '0.7rem' }}>
+        <Box sx={{ width: '100%', fontSize: '0.875rem' }}>
+            {/* Hiển thị loading khi đang tải dữ liệu */}
             {loading && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 9999 }}>
                     <CircularProgress size="2rem" />
                 </Box>
             )}
 
-            <Paper elevation={2} sx={{ mb: 2.4, minWidth: '960px' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: 1, borderColor: 'divider', px: 1.6 }}>
+            {/* Thanh tab và nút thêm mới */}
+            <Paper elevation={2} sx={{ mb: 2, minWidth: '960px' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: 1, borderColor: 'divider', px: 1 }}>
                     <Tabs value={value} onChange={handleChange} aria-label="room tabs">
-                        <Tab label="Hạng phòng" {...a11yProps(0)} sx={{ py: 1.6 }} />
-                        <Tab label="Danh sách phòng" {...a11yProps(1)} sx={{ py: 1.6 }} />
+                        <Tab label="Hạng phòng" {...a11yProps(0)} sx={{ py: 1 }} />
+                        <Tab label="Danh sách phòng" {...a11yProps(1)} sx={{ py: 1 }} />
                     </Tabs>
                     <Box onMouseEnter={handleAddMouseEnter} onMouseLeave={handleAddMouseLeave}>
                         <Button
@@ -433,7 +479,7 @@ export default function RoomTabs() {
                             color="success"
                             startIcon={<AddIcon />}
                             endIcon={<KeyboardArrowDownIcon />}
-                            sx={{ fontSize: '0.7rem' }}
+                            sx={{ fontSize: '0.875rem' }}
                             ref={addButtonRef}
                         >
                             Thêm mới
@@ -443,28 +489,12 @@ export default function RoomTabs() {
                             anchorEl={addButtonRef.current}
                             placement="bottom-start"
                             disablePortal
-                            style={{ zIndex: 9999 }}>
-                            <Box
-                                sx={{
-                                    bgcolor: "white",
-                                    borderRadius: 1,
-                                    boxShadow: 3,
-                                    minWidth: 180,
-                                }}
-                                onMouseEnter={handleAddMouseEnter}
-                                onMouseLeave={handleAddMouseLeave}
-                            >
+                            style={{ zIndex: 9999 }}
+                        >
+                            <Box sx={{ bgcolor: 'white', borderRadius: 1, boxShadow: 3, minWidth: 180 }}>
                                 <MenuList dense>
-                                    <MenuItem
-                                        onClick={handleAddRoomCategory}
-                                    >
-                                        Thêm hạng phòng
-                                    </MenuItem>
-                                    <MenuItem
-                                        onClick={handleAddRoom}
-                                    >
-                                        Thêm phòng
-                                    </MenuItem>
+                                    <MenuItem onClick={handleAddRoomCategory}>Thêm hạng phòng</MenuItem>
+                                    <MenuItem onClick={handleAddRoom}>Thêm phòng</MenuItem>
                                 </MenuList>
                             </Box>
                         </Popper>
@@ -472,21 +502,27 @@ export default function RoomTabs() {
                 </Box>
             </Paper>
 
+            {/* Dialog thêm hạng phòng */}
             <AddRoomCategoryDialog
                 open={openRoomCategoryDialog}
                 onClose={handleCloseRoomCategoryDialog}
-                onSuccess={() => filteredCategories(pageCategories)}
+                onSuccess={() => {
+                    fetchRoomCategories(); // Cập nhật lại danh sách hạng phòng sau khi thêm mới
+                    filteredCategories(page);
+                }}
             />
 
+            {/* Dialog thêm phòng */}
             <AddRoomDialog
                 open={openRoomDialog}
                 onClose={handleCloseRoomDialog}
-                onSuccess={() => filteredRooms(pageRooms)}
+                onSuccess={() => filteredRooms(page)}
             />
 
-            <Grid container spacing={2.4} sx={{ minWidth: '960px' }}>
+            <Grid container spacing={2} sx={{ minWidth: '960px' }}>
+                {/* Bộ lọc */}
                 <Grid item xs={4}>
-                    <Paper elevation={1} sx={{ p: 1.6, height: '100%' }}>
+                    <Paper elevation={1} sx={{ p: 1, height: '100%' }}>
                         {value === 0 ? (
                             <>
                                 <TextField
@@ -495,37 +531,40 @@ export default function RoomTabs() {
                                     value={searchCategory}
                                     onChange={(e) => {
                                         setSearchCategory(e.target.value);
-                                        debouncedFilteredCategories(pageCategories);
+                                        setPage(0);
+                                        debouncedFilteredCategories(0);
                                     }}
-                                    sx={{ mb: 1.6 }}
+                                    sx={{ mb: 1 }}
                                     size="small"
                                 />
-                                <Box sx={{ mb: 1.6 }}>
+                                <Box sx={{ mb: 1 }}>
                                     <FormControlLabel
-                                        control={<Checkbox checked={statusCategory.active} onChange={(e) => setStatusCategory({ ...statusCategory, active: e.target.checked, inactive: !e.target.checked })} size="small" />}
+                                        control={
+                                            <Checkbox
+                                                checked={statusCategory.active}
+                                                onChange={(e) =>
+                                                    setStatusCategory({ ...statusCategory, active: e.target.checked, inactive: !e.target.checked })
+                                                }
+                                                size="small"
+                                            />
+                                        }
                                         label="Đang kinh doanh"
-                                        sx={{ '& .MuiTypography-root': { fontSize: '0.7rem' } }}
+                                        sx={{ '& .MuiTypography-root': { fontSize: '0.875rem' } }}
                                     />
                                     <FormControlLabel
-                                        control={<Checkbox checked={statusCategory.inactive} onChange={(e) => setStatusCategory({ ...statusCategory, inactive: e.target.checked, active: !e.target.checked })} size="small" />}
+                                        control={
+                                            <Checkbox
+                                                checked={statusCategory.inactive}
+                                                onChange={(e) =>
+                                                    setStatusCategory({ ...statusCategory, inactive: e.target.checked, active: !e.target.checked })
+                                                }
+                                                size="small"
+                                            />
+                                        }
                                         label="Ngừng kinh doanh"
-                                        sx={{ '& .MuiTypography-root': { fontSize: '0.7rem' } }}
+                                        sx={{ '& .MuiTypography-root': { fontSize: '0.875rem' } }}
                                     />
                                 </Box>
-                                <FormControl fullWidth size="small">
-                                    <InputLabel sx={{ fontSize: '0.7rem' }}>Số bản ghi</InputLabel>
-                                    <Select
-                                        value={recordsPerPage}
-                                        onChange={handleRowsPerPageChange}
-                                        label="Số bản ghi"
-                                        variant="outlined"
-                                        sx={{ fontSize: '0.7rem' }}
-                                    >
-                                        <MenuItem value={5} sx={{ fontSize: '0.7rem' }}>5</MenuItem>
-                                        <MenuItem value={10} sx={{ fontSize: '0.7rem' }}>10</MenuItem>
-                                        <MenuItem value={15} sx={{ fontSize: '0.7rem' }}>15</MenuItem>
-                                    </Select>
-                                </FormControl>
                             </>
                         ) : (
                             <>
@@ -535,93 +574,96 @@ export default function RoomTabs() {
                                     value={searchRoom}
                                     onChange={(e) => {
                                         setSearchRoom(e.target.value);
-                                        debouncedFilteredRooms(pageRooms);
+                                        setPage(0);
+                                        debouncedFilteredRooms(0);
                                     }}
-                                    sx={{ mb: 1.6 }}
+                                    sx={{ mb: 1 }}
                                     size="small"
                                 />
-                                <FormControl fullWidth sx={{ mb: 1.6 }} size="small">
-                                    <InputLabel sx={{ fontSize: '0.7rem' }}>Loại phòng</InputLabel>
+                                <FormControl fullWidth sx={{ mb: 1 }} size="small">
+                                    <InputLabel sx={{ fontSize: '0.875rem' }}>Loại phòng</InputLabel>
                                     <Select
                                         value={categoryRoom}
                                         onChange={(e) => {
-                                            setCategoryRoom(e.target.value === '' ? '' : e.target.value);
-                                            setPageRooms(0);
-                                            filteredRooms(pageRooms);
+                                            setCategoryRoom(e.target.value);
+                                            setPage(0);
+                                            filteredRooms(0); // Gọi trực tiếp để áp dụng bộ lọc ngay lập tức
                                         }}
                                         label="Loại phòng"
-                                        variant="outlined"
-                                        sx={{ fontSize: '0.7rem' }}
+                                        sx={{ fontSize: '0.875rem' }}
+                                        disabled={loadingCategories}
                                     >
-                                        <MenuItem value="" sx={{ fontSize: '0.7rem' }}>Tất cả</MenuItem>
+                                        <MenuItem value="" sx={{ fontSize: '0.875rem' }}>
+                                            Tất cả
+                                        </MenuItem>
                                         {roomCategories.length > 0 ? (
                                             roomCategories.map((category) => (
-                                                <MenuItem key={category.id} value={category.id} sx={{ fontSize: '0.7rem' }}>
+                                                <MenuItem key={category.id} value={category.id} sx={{ fontSize: '0.875rem' }}>
                                                     {category.name}
                                                 </MenuItem>
                                             ))
                                         ) : (
-                                            <MenuItem value="" disabled sx={{ fontSize: '0.7rem' }}>
-                                                Không có hạng phòng nào
+                                            <MenuItem value="" disabled sx={{ fontSize: '0.875rem' }}>
+                                                {loadingCategories ? 'Đang tải...' : 'Không có hạng phòng'}
                                             </MenuItem>
                                         )}
                                     </Select>
                                 </FormControl>
-                                <FormControl fullWidth sx={{ mb: 1.6 }} size="small">
-                                    <InputLabel sx={{ fontSize: '0.7rem' }}>Tầng</InputLabel>
+                                <FormControl fullWidth sx={{ mb: 1 }} size="small">
+                                    <InputLabel sx={{ fontSize: '0.875rem' }}>Tầng</InputLabel>
                                     <Select
                                         value={floorRoom}
                                         onChange={(e) => {
-                                            setFloorRoom(e.target.value === '' ? '' : e.target.value);
-                                            setPageRooms(0);
-                                            filteredRooms(pageRooms);
+                                            setFloorRoom(e.target.value);
+                                            setPage(0);
+                                            filteredRooms(0); // Gọi trực tiếp để áp dụng bộ lọc ngay lập tức
                                         }}
                                         label="Tầng"
-                                        variant="outlined"
-                                        sx={{ fontSize: '0.7rem' }}
+                                        sx={{ fontSize: '0.875rem' }}
                                     >
-                                        <MenuItem value="" sx={{ fontSize: '0.7rem' }}>Tất cả</MenuItem>
+                                        <MenuItem value="" sx={{ fontSize: '0.875rem' }}>
+                                            Tất cả
+                                        </MenuItem>
                                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((floor) => (
-                                            <MenuItem key={floor} value={floor} sx={{ fontSize: '0.7rem' }}>
+                                            <MenuItem key={floor} value={floor} sx={{ fontSize: '0.875rem' }}>
                                                 Tầng {floor}
                                             </MenuItem>
                                         ))}
                                     </Select>
                                 </FormControl>
-                                <FormControl fullWidth sx={{ mb: 1.6 }} size="small">
-                                    <InputLabel sx={{ fontSize: '0.7rem' }}>Tình trạng</InputLabel>
+                                <FormControl fullWidth sx={{ mb: 1 }} size="small">
+                                    <InputLabel sx={{ fontSize: '0.875rem' }}>Tình trạng</InputLabel>
                                     <Select
                                         value={statusRoom}
                                         onChange={(e) => {
                                             setStatusRoom(e.target.value);
-                                            setPageRooms(0);
-                                            filteredRooms(pageRooms);
+                                            setPage(0);
+                                            filteredRooms(0); // Gọi trực tiếp để áp dụng bộ lọc ngay lập tức
                                         }}
                                         label="Tình trạng"
-                                        variant="outlined"
-                                        sx={{ fontSize: '0.7rem' }}
+                                        sx={{ fontSize: '0.875rem' }}
                                     >
-                                        <MenuItem value="" sx={{ fontSize: '0.7rem' }}>Tất cả</MenuItem>
-                                        <MenuItem value="AVAILABLE" sx={{ fontSize: '0.7rem' }}>Trống</MenuItem>
-                                        <MenuItem value="UPCOMING" sx={{ fontSize: '0.7rem' }}>Sắp tới</MenuItem>
-                                        <MenuItem value="IN_USE" sx={{ fontSize: '0.7rem' }}>Đang sử dụng</MenuItem>
-                                        <MenuItem value="CHECKOUT_SOON" sx={{ fontSize: '0.7rem' }}>Sắp trả phòng</MenuItem>
-                                        <MenuItem value="MAINTENANCE" sx={{ fontSize: '0.7rem' }}>Bảo trì</MenuItem>
-                                        <MenuItem value="OVERDUE" sx={{ fontSize: '0.7rem' }}>Quá hạn</MenuItem>
-                                    </Select>
-                                </FormControl>
-                                <FormControl fullWidth size="small">
-                                    <InputLabel sx={{ fontSize: '0.7rem' }}>Số bản ghi</InputLabel>
-                                    <Select
-                                        value={recordsPerPage}
-                                        onChange={handleRowsPerPageChange}
-                                        label="Số bản ghi"
-                                        variant="outlined"
-                                        sx={{ fontSize: '0.7rem' }}
-                                    >
-                                        <MenuItem value={5} sx={{ fontSize: '0.7rem' }}>5</MenuItem>
-                                        <MenuItem value={10} sx={{ fontSize: '0.7rem' }}>10</MenuItem>
-                                        <MenuItem value={15} sx={{ fontSize: '0.7rem' }}>15</MenuItem>
+                                        <MenuItem value="" sx={{ fontSize: '0.875rem' }}>
+                                            Tất cả
+                                        </MenuItem>
+                                        <MenuItem value="AVAILABLE" sx={{ fontSize: '0.875rem' }}>
+                                            Trống
+                                        </MenuItem>
+                                        <MenuItem value="UPCOMING" sx={{ fontSize: '0.875rem' }}>
+                                            Sắp tới
+                                        </MenuItem>
+                                        <MenuItem value="IN_USE" sx={{ fontSize: '0.875rem' }}>
+                                            Đang sử dụng
+                                        </MenuItem>
+                                        <MenuItem value="CHECKOUT_SOON" sx={{ fontSize: '0.875rem' }}>
+                                            Sắp trả phòng
+                                        </MenuItem>
+                                        <MenuItem value="MAINTENANCE" sx={{ fontSize: '0.875rem' }}>
+                                            Bảo trì
+                                        </MenuItem>
+                                        <MenuItem value="OVERDUE" sx={{ fontSize: '0.875rem' }}>
+                                            Quá hạn
+                                        </MenuItem>
                                     </Select>
                                 </FormControl>
                             </>
@@ -629,27 +671,28 @@ export default function RoomTabs() {
                     </Paper>
                 </Grid>
 
+                {/* Bảng dữ liệu */}
                 <Grid item xs={8}>
                     <Paper elevation={2} sx={{ height: '100%' }}>
                         <CustomTabPanel value={value} index={0}>
-                            <Typography variant="h6" sx={{ mb: 1.6, px: 0.8, fontSize: '0.8rem' }}>
-                                Hạng phòng & Phòng
+                            <Typography variant="h6" sx={{ mb: 1, px: 0.5, fontSize: '1rem' }}>
+                                Hạng phòng
                             </Typography>
-                            <TableContainer sx={{ maxHeight: '320px' }}>
-                                <Table size="small" stickyHeader sx={{ fontSize: '0.6rem' }}>
+                            <TableContainer sx={{ maxHeight: '400px' }}>
+                                <Table size="small" stickyHeader>
                                     <TableHead>
                                         <TableRow>
                                             {categoriesColumns.map((column) => (
                                                 <TableCell
                                                     key={column.id}
                                                     sx={{
-                                                        px: 0.4,
-                                                        py: 0.4,
+                                                        px: 0.5,
+                                                        py: 0.5,
                                                         width: column.width,
                                                         whiteSpace: 'nowrap',
                                                         fontWeight: 'bold',
                                                         backgroundColor: '#f5f5f5',
-                                                        fontSize: '0.6rem',
+                                                        fontSize: '0.875rem',
                                                     }}
                                                 >
                                                     {column.id === 'checkbox' ? (
@@ -664,7 +707,9 @@ export default function RoomTabs() {
                                                             }}
                                                             size="small"
                                                         />
-                                                    ) : column.label}
+                                                    ) : (
+                                                        column.label
+                                                    )}
                                                 </TableCell>
                                             ))}
                                         </TableRow>
@@ -678,12 +723,10 @@ export default function RoomTabs() {
                                                         sx={{
                                                             cursor: 'pointer',
                                                             bgcolor: expandedRow === category.id ? 'rgba(0, 0, 0, 0.04)' : 'inherit',
-                                                            '&:hover': {
-                                                                bgcolor: 'rgba(0, 0, 0, 0.08)',
-                                                            },
+                                                            '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.08)' },
                                                         }}
                                                     >
-                                                        <TableCell sx={{ px: 0.4, py: 0.4 }}>
+                                                        <TableCell sx={{ px: 0.5, py: 0.5 }}>
                                                             <Checkbox
                                                                 checked={selectedCategories.includes(category.id)}
                                                                 onChange={(e) => {
@@ -693,34 +736,42 @@ export default function RoomTabs() {
                                                                 size="small"
                                                             />
                                                         </TableCell>
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{category.code}</TableCell>
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{category.name}</TableCell>
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{category.rooms?.length || 0}</TableCell>
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{category.hourlyPrice?.toLocaleString() || 'N/A'} đ</TableCell>
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{category.dailyPrice?.toLocaleString() || 'N/A'} đ</TableCell>
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{category.overnightPrice?.toLocaleString() || 'N/A'} đ</TableCell>
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>
+                                                        <TableCell sx={{ px: 0.5, py: 0.5, fontSize: '0.875rem' }}>{category.code}</TableCell>
+                                                        <TableCell sx={{ px: 0.5, py: 0.5, fontSize: '0.875rem' }}>{category.name}</TableCell>
+                                                        <TableCell sx={{ px: 0.5, py: 0.5, fontSize: '0.875rem' }}>
+                                                            {category.rooms?.length || 0}
+                                                        </TableCell>
+                                                        <TableCell sx={{ px: 0.5, py: 0.5, fontSize: '0.875rem' }}>
+                                                            {category.hourlyPrice?.toLocaleString() || 'N/A'} đ
+                                                        </TableCell>
+                                                        <TableCell sx={{ px: 0.5, py: 0.5, fontSize: '0.875rem' }}>
+                                                            {category.dailyPrice?.toLocaleString() || 'N/A'} đ
+                                                        </TableCell>
+                                                        <TableCell sx={{ px: 0.5, py: 0.5, fontSize: '0.875rem' }}>
+                                                            {category.overnightPrice?.toLocaleString() || 'N/A'} đ
+                                                        </TableCell>
+                                                        <TableCell sx={{ px: 0.5, py: 0.5, fontSize: '0.875rem' }}>
                                                             <Box
                                                                 sx={{
                                                                     display: 'inline-block',
-                                                                    px: 0.4,
-                                                                    py: 0.2,
+                                                                    px: 0.5,
+                                                                    py: 0.25,
                                                                     borderRadius: 0.8,
                                                                     bgcolor: category.status === 'ACTIVE' ? 'success.light' : 'error.light',
                                                                     color: 'white',
-                                                                    fontSize: '0.6rem',
+                                                                    fontSize: '0.875rem',
                                                                 }}
                                                             >
                                                                 {category.status === 'ACTIVE' ? 'Đang kinh doanh' : 'Ngừng kinh doanh'}
                                                             </Box>
                                                         </TableCell>
-                                                        <TableCell sx={{ px: 0.4, py: 0.4 }}>
+                                                        <TableCell sx={{ px: 0.5, py: 0.5 }}>
                                                             <Button
                                                                 variant="text"
                                                                 color="primary"
                                                                 onClick={(e) => handleUpdate(category, e)}
                                                                 size="small"
-                                                                sx={{ fontSize: '0.6rem', minWidth: 'auto' }}
+                                                                sx={{ fontSize: '0.875rem', minWidth: 'auto' }}
                                                             >
                                                                 Chỉnh sửa
                                                             </Button>
@@ -729,80 +780,83 @@ export default function RoomTabs() {
                                                     {expandedRow === category.id && expandedRowDetails && (
                                                         <TableRow>
                                                             <TableCell colSpan={9} sx={{ p: 0 }}>
-                                                                <Box sx={{
-                                                                    p: 0.8,
-                                                                    bgcolor: 'rgba(0, 0, 0, 0.02)',
-                                                                    borderTop: '1px dashed rgba(0, 0, 0, 0.1)',
-                                                                    borderBottom: '1px dashed rgba(0, 0, 0, 0.1)',
-                                                                    fontSize: '0.6rem'
-                                                                }}>
-                                                                    <Typography variant="subtitle1" sx={{ mb: 0.8, fontWeight: 'bold', fontSize: '0.7rem' }}>
+                                                                <Box sx={{ p: 0.5, bgcolor: 'rgba(0, 0, 0, 0.02)', fontSize: '0.875rem' }}>
+                                                                    <Typography variant="subtitle1" sx={{ mb: 0.5, fontWeight: 'bold', fontSize: '1rem' }}>
                                                                         Thông tin chi tiết
                                                                     </Typography>
-                                                                    <Grid container spacing={0.8}>
+                                                                    <Grid container spacing={0.5}>
                                                                         <Grid item xs={4}>
                                                                             <Box>
-                                                                                <Typography variant="body2" sx={{ fontSize: '0.6rem', fontWeight: 'bold' }}>
+                                                                                <Typography variant="body2" sx={{ fontSize: '0.875rem', fontWeight: 'bold' }}>
                                                                                     Ảnh:
                                                                                 </Typography>
                                                                                 <img
-                                                                                    src={expandedRowDetails.imgUrl ? (expandedRowDetails.imgUrl.startsWith('http') ? expandedRowDetails.imgUrl : `http://localhost:8080/${expandedRowDetails.imgUrl}`) : placeholderImage}
+                                                                                    src={
+                                                                                        expandedRowDetails.imgUrl
+                                                                                            ? expandedRowDetails.imgUrl.startsWith('http')
+                                                                                                ? expandedRowDetails.imgUrl
+                                                                                                : `http://localhost:8080/${expandedRowDetails.imgUrl}`
+                                                                                            : placeholderImage
+                                                                                    }
                                                                                     alt={expandedRowDetails.name}
-                                                                                    style={{
-                                                                                        width: '120px',
-                                                                                        height: '120px',
-                                                                                        objectFit: 'cover',
-                                                                                        marginTop: '6.4px'
-                                                                                    }}
+                                                                                    style={{ width: '120px', height: '120px', objectFit: 'cover', marginTop: '4px' }}
                                                                                 />
                                                                             </Box>
                                                                         </Grid>
                                                                         <Grid item xs={8}>
-                                                                            <Grid container spacing={0.8}>
+                                                                            <Grid container spacing={0.5}>
                                                                                 <Grid item xs={6}>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
                                                                                         <strong>Mã hạng phòng:</strong> {expandedRowDetails.code}
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
                                                                                         <strong>Tên hạng phòng:</strong> {expandedRowDetails.name}
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
-                                                                                        <strong>Sức chứa tối đa:</strong> {expandedRowDetails.maxAdultCapacity} người lớn, {expandedRowDetails.maxChildCapacity} trẻ em
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
+                                                                                        <strong>Sức chứa tối đa:</strong> {expandedRowDetails.maxAdultCapacity} người
+                                                                                        lớn, {expandedRowDetails.maxChildCapacity} trẻ em
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
-                                                                                        <strong>Sức chứa từ chuẩn:</strong> {expandedRowDetails.standardAdultCapacity} người lớn, {expandedRowDetails.standardChildCapacity} trẻ em
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
+                                                                                        <strong>Sức chứa từ chuẩn:</strong> {expandedRowDetails.standardAdultCapacity}{' '}
+                                                                                        người lớn, {expandedRowDetails.standardChildCapacity} trẻ em
                                                                                     </Typography>
                                                                                 </Grid>
                                                                                 <Grid item xs={6}>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
                                                                                         <strong>Chi nhánh:</strong> Chi nhánh trung tâm
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
                                                                                         <strong>Số lượng phòng:</strong> {expandedRowDetails.rooms?.length || 0}
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
-                                                                                        <strong>Giá giờ:</strong> {expandedRowDetails.hourlyPrice?.toLocaleString() || 'N/A'} đ
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
+                                                                                        <strong>Giá giờ:</strong> {expandedRowDetails.hourlyPrice?.toLocaleString() ||
+                                                                                        'N/A'}{' '}
+                                                                                        đ
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
-                                                                                        <strong>Giá ngày:</strong> {expandedRowDetails.dailyPrice?.toLocaleString() || 'N/A'} đ
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
+                                                                                        <strong>Giá ngày:</strong> {expandedRowDetails.dailyPrice?.toLocaleString() ||
+                                                                                        'N/A'}{' '}
+                                                                                        đ
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
-                                                                                        <strong>Giá qua đêm:</strong> {expandedRowDetails.overnightPrice?.toLocaleString() || 'N/A'} đ
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
+                                                                                        <strong>Giá qua đêm:</strong>{' '}
+                                                                                        {expandedRowDetails.overnightPrice?.toLocaleString() || 'N/A'} đ
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
-                                                                                        <strong>Phụ phí khác:</strong> {expandedRowDetails.defaultExtraFee?.toLocaleString() || 'N/A'} đ
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
+                                                                                        <strong>Phụ phí khác:</strong>{' '}
+                                                                                        {expandedRowDetails.defaultExtraFee?.toLocaleString() || 'N/A'} đ
                                                                                     </Typography>
                                                                                 </Grid>
                                                                             </Grid>
                                                                         </Grid>
                                                                     </Grid>
-                                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.8, gap: 0.4 }}>
+                                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.5, gap: 0.5 }}>
                                                                         <Button
                                                                             variant="contained"
                                                                             color="success"
                                                                             onClick={(e) => handleUpdate(category, e)}
                                                                             size="small"
-                                                                            sx={{ minWidth: 64, fontSize: '0.6rem' }}
+                                                                            sx={{ minWidth: 64, fontSize: '0.875rem' }}
                                                                         >
                                                                             Cập nhật
                                                                         </Button>
@@ -811,7 +865,7 @@ export default function RoomTabs() {
                                                                             color="error"
                                                                             onClick={(e) => handleDeactivate(category, e)}
                                                                             size="small"
-                                                                            sx={{ minWidth: 64, fontSize: '0.6rem' }}
+                                                                            sx={{ minWidth: 64, fontSize: '0.875rem' }}
                                                                         >
                                                                             Ngừng kinh doanh
                                                                         </Button>
@@ -820,7 +874,7 @@ export default function RoomTabs() {
                                                                             color="error"
                                                                             onClick={(e) => handleDelete(category, e)}
                                                                             size="small"
-                                                                            sx={{ minWidth: 64, fontSize: '0.6rem' }}
+                                                                            sx={{ minWidth: 64, fontSize: '0.875rem' }}
                                                                         >
                                                                             Xóa
                                                                         </Button>
@@ -833,7 +887,7 @@ export default function RoomTabs() {
                                             ))
                                         ) : (
                                             <TableRow>
-                                                <TableCell colSpan={9} align="center" sx={{ fontSize: '0.6rem' }}>
+                                                <TableCell colSpan={9} align="center" sx={{ fontSize: '0.875rem' }}>
                                                     Không có dữ liệu hạng phòng
                                                 </TableCell>
                                             </TableRow>
@@ -841,36 +895,26 @@ export default function RoomTabs() {
                                     </TableBody>
                                 </Table>
                             </TableContainer>
-                            <TablePagination
-                                component="div"
-                                count={totalCategories}
-                                page={pageCategories}
-                                onPageChange={handleCategoriesPageChange}
-                                rowsPerPage={recordsPerPage}
-                                onRowsPerPageChange={handleRowsPerPageChange}
-                                rowsPerPageOptions={[5, 10, 15]}
-                                sx={{ fontSize: '0.6rem' }}
-                            />
                         </CustomTabPanel>
                         <CustomTabPanel value={value} index={1}>
-                            <Typography variant="h6" sx={{ mb: 1.6, px: 0.8, fontSize: '0.8rem' }}>
+                            <Typography variant="h6" sx={{ mb: 1, px: 0.5, fontSize: '1rem' }}>
                                 Danh sách phòng
                             </Typography>
-                            <TableContainer sx={{ maxHeight: '320px' }}>
-                                <Table size="small" stickyHeader sx={{ fontSize: '0.6rem' }}>
+                            <TableContainer sx={{ maxHeight: '400px' }}>
+                                <Table size="small" stickyHeader>
                                     <TableHead>
                                         <TableRow>
                                             {roomsColumns.map((column) => (
                                                 <TableCell
                                                     key={column.id}
                                                     sx={{
-                                                        px: 0.4,
-                                                        py: 0.4,
+                                                        px: 0.5,
+                                                        py: 0.5,
                                                         width: column.width,
                                                         whiteSpace: 'nowrap',
                                                         fontWeight: 'bold',
                                                         backgroundColor: '#f5f5f5',
-                                                        fontSize: '0.6rem',
+                                                        fontSize: '0.875rem',
                                                     }}
                                                 >
                                                     {column.label}
@@ -887,118 +931,150 @@ export default function RoomTabs() {
                                                         sx={{
                                                             cursor: 'pointer',
                                                             bgcolor: expandedRoomRow === room.id ? 'rgba(0, 0, 0, 0.04)' : 'inherit',
-                                                            '&:hover': {
-                                                                bgcolor: 'rgba(0, 0, 0, 0.08)',
-                                                            },
+                                                            '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.08)' },
                                                         }}
                                                     >
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{room.id}</TableCell>
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{room.roomCategory?.name || 'Không xác định'}</TableCell>
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{room.floor !== null && room.floor !== undefined ? room.floor : 'Không xác định'}</TableCell>
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>
+                                                        <TableCell sx={{ px: 0.5, py: 0.5, fontSize: '0.875rem' }}>{room.id}</TableCell>
+                                                        <TableCell sx={{ px: 0.5, py: 0.5, fontSize: '0.875rem' }}>
+                                                            {room.roomCategory?.name || 'Không xác định'}
+                                                        </TableCell>
+                                                        <TableCell sx={{ px: 0.5, py: 0.5, fontSize: '0.875rem' }}>
+                                                            {room.floor !== null && room.floor !== undefined ? room.floor : 'Không xác định'}
+                                                        </TableCell>
+                                                        <TableCell sx={{ px: 0.5, py: 0.5, fontSize: '0.875rem' }}>
                                                             <Box
                                                                 sx={{
                                                                     display: 'inline-block',
-                                                                    px: 0.4,
-                                                                    py: 0.2,
-                                                                    borderRadius: 0.8,
-                                                                    bgcolor: room.status === 'AVAILABLE' ? 'success.light' : room.status === 'IN_USE' ? 'warning.light' : 'error.light',
+                                                                    px: 0.5,
+                                                                    py: 0.25,
+                                                                    borderRadius: '4px',
+                                                                    bgcolor:
+                                                                        room.status === 'AVAILABLE'
+                                                                            ? 'success.light'
+                                                                            : room.status === 'IN_USE'
+                                                                                ? 'warning.light'
+                                                                                : 'error.light',
                                                                     color: 'white',
-                                                                    fontSize: '0.6rem',
+                                                                    fontSize: '0.875rem',
                                                                 }}
                                                             >
                                                                 {getRoomStatusLabel(room.status)}
                                                             </Box>
                                                         </TableCell>
-                                                        <TableCell sx={{ px: 0.4, py: 0.4, fontSize: '0.6rem', whiteSpace: 'normal', wordWrap: 'break-word' }}>{room.isClean ? 'Sạch' : 'Chưa dọn'}</TableCell>
+                                                        <TableCell sx={{ px: 0.5, py: 0.5, fontSize: '0.875rem' }}>
+                                                            {room.isClean ? 'Sạch' : 'Chưa dọn'}
+                                                        </TableCell>
+                                                        <TableCell sx={{ px: 0.5, py: 0.5 }}>
+                                                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                                                <Button
+                                                                    variant="text"
+                                                                    color="primary"
+                                                                    onClick={(e) => handleRoomUpdate(room, e)}
+                                                                    size="small"
+                                                                    sx={{ fontSize: '0.875rem', minWidth: 'auto' }}
+                                                                >
+                                                                    Chỉnh sửa
+                                                                </Button>
+                                                                <Button
+                                                                    variant="text"
+                                                                    color="error"
+                                                                    onClick={(e) => handleRoomDelete(room, e)}
+                                                                    size="small"
+                                                                    sx={{ fontSize: '0.875rem', minWidth: 'auto' }}
+                                                                >
+                                                                    Xóa
+                                                                </Button>
+                                                            </Box>
+                                                        </TableCell>
                                                     </TableRow>
                                                     {expandedRoomRow === room.id && expandedRoomDetails && (
                                                         <TableRow>
-                                                            <TableCell colSpan={5} sx={{ p: 0 }}>
-                                                                <Box sx={{
-                                                                    p: 0.8,
-                                                                    bgcolor: 'rgba(0, 0, 0, 0.02)',
-                                                                    borderTop: '1px dashed rgba(0, 0, 0, 0.1)',
-                                                                    borderBottom: '1px dashed rgba(0, 0, 0, 0.1)',
-                                                                    fontSize: '0.6rem'
-                                                                }}>
-                                                                    <Typography variant="subtitle1" sx={{ mb: 0.8, fontWeight: 'bold', fontSize: '0.7rem' }}>
+                                                            <TableCell colSpan={6} sx={{ p: 0 }}>
+                                                                <Box sx={{ p: 0.5, bgcolor: 'rgba(0, 0, 0, 0.02)', fontSize: '0.875rem' }}>
+                                                                    <Typography variant="subtitle1" sx={{ mb: 0.5, fontWeight: 'bold', fontSize: '1rem' }}>
                                                                         Thông tin chi tiết
                                                                     </Typography>
-                                                                    <Grid container spacing={0.8}>
+                                                                    <Grid container spacing={0.5}>
                                                                         <Grid item xs={12}>
-                                                                            <Box sx={{ display: 'flex', gap: 0.8 }}>
+                                                                            <Box sx={{ display: 'flex', gap: 0.5 }}>
                                                                                 <Box>
                                                                                     <img
                                                                                         src={
                                                                                             mainImage
-                                                                                                ? (mainImage.startsWith('http')
+                                                                                                ? mainImage.startsWith('http')
                                                                                                     ? mainImage
-                                                                                                    : `http://localhost:8080/${mainImage}`)
-                                                                                                : (expandedRoomDetails.img1 || placeholderImage)
+                                                                                                    : `http://localhost:8080/${mainImage}`
+                                                                                                : expandedRoomDetails.img1 || placeholderImage
                                                                                         }
                                                                                         alt={`Phòng ${expandedRoomDetails.id}`}
                                                                                         style={{
                                                                                             width: '300px',
                                                                                             height: '200px',
                                                                                             objectFit: 'cover',
-                                                                                            borderRadius: '8px'
+                                                                                            borderRadius: '8px',
                                                                                         }}
                                                                                     />
                                                                                 </Box>
                                                                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4 }}>
-                                                                                    {[expandedRoomDetails.img1, expandedRoomDetails.img2, expandedRoomDetails.img3, expandedRoomDetails.img4].map((img, index) => (
-                                                                                        img && (
-                                                                                            <img
-                                                                                                key={index}
-                                                                                                src={
-                                                                                                    img.startsWith('http')
-                                                                                                        ? img
-                                                                                                        : `http://localhost:8080/${img}`
-                                                                                                }
-                                                                                                alt={`Thumbnail ${index + 1}`}
-                                                                                                onClick={() => handleThumbnailClick(img)}
-                                                                                                style={{
-                                                                                                    width: '60px',
-                                                                                                    height: '60px',
-                                                                                                    objectFit: 'cover',
-                                                                                                    borderRadius: '4px',
-                                                                                                    cursor: 'pointer',
-                                                                                                    border: mainImage === img ? '2px solid #1976d2' : 'none'
-                                                                                                }}
-                                                                                            />
-                                                                                        )
-                                                                                    ))}
+                                                                                    {[expandedRoomDetails.img1, expandedRoomDetails.img2, expandedRoomDetails.img3, expandedRoomDetails.img4].map(
+                                                                                        (img, index) =>
+                                                                                            img && (
+                                                                                                <img
+                                                                                                    key={index}
+                                                                                                    src={img.startsWith('http') ? img : `http://localhost:8080/${img}`}
+                                                                                                    alt={`Thumbnail ${index + 1}`}
+                                                                                                    onClick={() => handleThumbnailClick(img)}
+                                                                                                    style={{
+                                                                                                        width: '60px',
+                                                                                                        height: '60px',
+                                                                                                        objectFit: 'cover',
+                                                                                                        borderRadius: '4px',
+                                                                                                        cursor: 'pointer',
+                                                                                                        border: mainImage === img ? '2px solid #1976d2' : 'none',
+                                                                                                    }}
+                                                                                                />
+                                                                                            )
+                                                                                    )}
                                                                                 </Box>
                                                                             </Box>
                                                                         </Grid>
                                                                         <Grid item xs={12}>
-                                                                            <Grid container spacing={0.8}>
+                                                                            <Grid container spacing={0.5}>
                                                                                 <Grid item xs={6}>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
                                                                                         <strong>Mã phòng:</strong> {expandedRoomDetails.id}
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
-                                                                                        <strong>Hạng phòng:</strong> {expandedRoomDetails.roomCategory?.name || 'Không xác định'}
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
+                                                                                        <strong>Hạng phòng:</strong> {expandedRoomDetails?.roomCategory?.name ||
+                                                                                        'Không xác định'}
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
-                                                                                        <strong>Tầng:</strong> {expandedRoomDetails.floor !== null && expandedRoomDetails.floor !== undefined ? expandedRoomDetails.floor : 'Không xác định'}
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
+                                                                                        <strong>Tầng:</strong>{' '}
+                                                                                        {expandedRoomDetails?.floor !== null && expandedRoomDetails?.floor !== undefined
+                                                                                            ? expandedRoomDetails?.floor
+                                                                                            : 'Không xác định'}
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
-                                                                                        <strong>Ngày bắt đầu:</strong> {expandedRoomDetails.startDate ? new Date(expandedRoomDetails.startDate).toLocaleDateString('vi-VN') : 'Không xác định'}
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
+                                                                                        <strong>Ngày bắt đầu:</strong>{' '}
+                                                                                        {expandedRoomDetails.startDate
+                                                                                            ? new Date(expandedRoomDetails.startDate).toLocaleDateString('vi-VN')
+                                                                                            : 'Không xác định'}
                                                                                     </Typography>
                                                                                 </Grid>
                                                                                 <Grid item xs={6}>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
                                                                                         <strong>Tình trạng:</strong> {getRoomStatusLabel(expandedRoomDetails.status)}
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
-                                                                                        <strong>Thời gian check-in:</strong> {expandedRoomDetails.checkInDuration ? `${expandedRoomDetails.checkInDuration} giờ` : '0 giờ'}
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
+                                                                                        <strong>Thời gian check-in:</strong>{' '}
+                                                                                        {expandedRoomDetails.checkInDuration
+                                                                                            ? `${expandedRoomDetails.checkInDuration} giờ`
+                                                                                            : '0 giờ'}
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
                                                                                         <strong>Ghi chú:</strong> {expandedRoomDetails.note || 'Không có'}
                                                                                     </Typography>
-                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.6rem' }}>
+                                                                                    <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
                                                                                         <strong>Chi nhánh:</strong> Chi nhánh trung tâm
                                                                                     </Typography>
                                                                                 </Grid>
@@ -1013,7 +1089,7 @@ export default function RoomTabs() {
                                             ))
                                         ) : (
                                             <TableRow>
-                                                <TableCell colSpan={5} align="center" sx={{ fontSize: '0.6rem' }}>
+                                                <TableCell colSpan={6} align="center" sx={{ fontSize: '0.875rem' }}>
                                                     {categoryRoom && categoryRoom !== ''
                                                         ? 'Không có phòng nào thuộc hạng phòng đã chọn'
                                                         : 'Không có dữ liệu phòng'}
@@ -1023,17 +1099,42 @@ export default function RoomTabs() {
                                     </TableBody>
                                 </Table>
                             </TableContainer>
+                        </CustomTabPanel>
+
+                        {/* Thanh phân trang và chọn số bản ghi */}
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1 }}>
+                            <FormControl size="small" sx={{ minWidth: 120 }}>
+                                <InputLabel sx={{ fontSize: '0.875rem' }}>Số bản ghi</InputLabel>
+                                <Select
+                                    value={recordsPerPage}
+                                    onChange={handleRowsPerPageChange}
+                                    label="Số bản ghi"
+                                    sx={{ fontSize: '0.875rem' }}
+                                >
+                                    <MenuItem value={5} sx={{ fontSize: '0.875rem' }}>
+                                        5
+                                    </MenuItem>
+                                    <MenuItem value={10} sx={{ fontSize: '0.875rem' }}>
+                                        10
+                                    </MenuItem>
+                                    <MenuItem value={15} sx={{ fontSize: '0.875rem' }}>
+                                        15
+                                    </MenuItem>
+                                </Select>
+                            </FormControl>
                             <TablePagination
                                 component="div"
-                                count={totalRooms}
-                                page={pageRooms}
-                                onPageChange={handleRoomsPageChange}
+                                count={totalRecords}
+                                page={page}
+                                onPageChange={handlePageChange}
                                 rowsPerPage={recordsPerPage}
                                 onRowsPerPageChange={handleRowsPerPageChange}
-                                rowsPerPageOptions={[5, 10, 15]}
-                                sx={{ fontSize: '0.6rem' }}
+                                rowsPerPageOptions={[]}
+                                sx={{ fontSize: '0.875rem' }}
+                                labelRowsPerPage=""
+                                labelDisplayedRows={({ from, to, count }) => `${from}–${to} trong ${count}`}
                             />
-                        </CustomTabPanel>
+                        </Box>
                     </Paper>
                 </Grid>
             </Grid>

@@ -30,8 +30,21 @@ class RoomViewService {
     /**
      * Thêm phòng mới
      */
-    static async addRoom(roomData) {
-        return await axiosInstance.post('/rooms', roomData);
+    static async addRoom(roomData, images = {}) {
+        const formData = new FormData();
+        // Gửi room data dưới dạng chuỗi JSON
+        formData.append('room', JSON.stringify(roomData));
+        // Gửi các file ảnh (nếu có)
+        if (images.img1) formData.append('img1', images.img1);
+        if (images.img2) formData.append('img2', images.img2);
+        if (images.img3) formData.append('img3', images.img3);
+        if (images.img4) formData.append('img4', images.img4);
+
+        return await axiosInstance.post('/rooms', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
     }
 
     static async addRoomCategory(roomCategoryData, imageFile) {
@@ -57,7 +70,7 @@ class RoomViewService {
      * Xóa phòng
      */
     static async deleteRoom(id) {
-        return await axiosInstance.delete(`/rooms/${id}`);
+        return await axiosInstance.delete(`/rooms/${id}/delete`);
     }
 
     /**
