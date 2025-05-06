@@ -301,7 +301,6 @@ class GuestService {
       throw error;
     }
   }
-
   /**
    * Get most recently added customers
    * 

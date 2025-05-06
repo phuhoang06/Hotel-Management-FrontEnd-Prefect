@@ -5,9 +5,10 @@ import SearchBar from './SearchBar';
 import ViewModeButtons from './ViewModeButtons';
 import ActionButtons from './ActionButtons';
 import { StatusBar } from './StatusBar';
-import RoomViewService from "../../../service/admin/room.service.js";
+import RoomBookingService from "../../../service/roomBooking.service.js";
 import RoomDetailsDialog from './RoomDetailsDialog';
 import QuickBookingDialog from './QuickBookingDialog';
+import BookingListDialog from './BookingListDialog';
 
 export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange }) {
     const [anchorElSearch, setAnchorElSearch] = useState(null);
@@ -19,14 +20,15 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [roomDetailsDialogOpen, setRoomDetailsDialogOpen] = useState(false);
     const [quickBookingDialogOpen, setQuickBookingDialogOpen] = useState(false);
+    const [bookingListDialogOpen, setBookingListDialogOpen] = useState(false);
     const [menuAnchorEl, setMenuAnchorEl] = useState(null);
     const [menuRoom, setMenuRoom] = useState(null);
 
     useEffect(() => {
         const fetchRooms = async () => {
             try {
-                const res = await RoomViewService.getAllRoomView();
-                const roomData = res.data.content || [];
+                const res = await RoomBookingService.getAllRoomsWithBookingDetails();
+                const roomData = res.content || [];
                 setRooms(roomData);
                 setAllRooms(roomData);
             } catch (err) {
@@ -91,16 +93,39 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
     const getBookingData = (room, index) => {
         const roomCategory = room.roomCategory || {};
         const dailyPrice = roomCategory.dailyPrice || 0;
-        const checkInTime = room.startDate
-            ? new Date(room.startDate[0], room.startDate[1] - 1, room.startDate[2]).toLocaleDateString('vi-VN')
-            : '';
-        const checkOutTime = room.checkInDuration && room.startDate
+        
+        // Sử dụng thông tin booking từ API mới nếu có
+        const upcomingBooking = room.bookings && room.bookings.length > 0 
+            ? room.bookings[0] // Lấy booking đầu tiên
+            : null;
+            
+        const checkInTime = upcomingBooking?.checkinTime
             ? new Date(
-                room.startDate[0],
-                room.startDate[1] - 1,
-                room.startDate[2] + room.checkInDuration
-            ).toLocaleDateString('vi-VN')
-            : '';
+                upcomingBooking.checkinTime[0], 
+                upcomingBooking.checkinTime[1] - 1, 
+                upcomingBooking.checkinTime[2],
+                upcomingBooking.checkinTime[3] || 0,
+                upcomingBooking.checkinTime[4] || 0
+              ).toLocaleDateString('vi-VN')
+            : (room.startDate
+                ? new Date(room.startDate[0], room.startDate[1] - 1, room.startDate[2]).toLocaleDateString('vi-VN')
+                : '');
+                
+        const checkOutTime = upcomingBooking?.checkoutTime
+            ? new Date(
+                upcomingBooking.checkoutTime[0], 
+                upcomingBooking.checkoutTime[1] - 1, 
+                upcomingBooking.checkoutTime[2],
+                upcomingBooking.checkoutTime[3] || 0,
+                upcomingBooking.checkoutTime[4] || 0
+              ).toLocaleDateString('vi-VN')
+            : (room.checkInDuration && room.startDate
+                ? new Date(
+                    room.startDate[0],
+                    room.startDate[1] - 1,
+                    room.startDate[2] + room.checkInDuration
+                  ).toLocaleDateString('vi-VN')
+                : '');
 
         return {
             stt: index + 1,
@@ -113,6 +138,8 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
             total: dailyPrice.toLocaleString('vi-VN'),
             paid: "0",
             action: getActionButton(statusToAction(room.status, room.isClean)),
+            // Thêm thông tin số booking
+            bookingCount: room.bookings ? room.bookings.length : 0
         };
     };
 
@@ -154,8 +181,8 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
             if (status === 'ALL') {
                 setRooms(allRooms);
             } else {
-                const response = await RoomViewService.searchRoomView({ status });
-                const roomData = response.data.content || [];
+                const response = await RoomBookingService.searchRoomsWithBookingDetails({ status });
+                const roomData = response.content || [];
                 setRooms(roomData);
             }
         } catch (error) {
@@ -187,7 +214,7 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
             console.log(`Changing room ${menuRoom.id} cleaning status to: ${newCleanStatus ? 'Đã dọn' : 'Chưa dọn'}`);
             
             // Update room cleaning status via API
-            await RoomViewService.updateRoomCleanStatus(menuRoom.id, newCleanStatus);
+            await RoomBookingService.updateRoomCleanStatus(menuRoom.id, newCleanStatus);
             
             // Update the local state
             const updatedRooms = rooms.map(room => 
@@ -248,14 +275,14 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
     // Làm mới dữ liệu phòng từ API
     const refreshRoomData = async () => {
         try {
-            const res = await RoomViewService.getAllRoomView();
-            const roomData = res.data.content || [];
+            const res = await RoomBookingService.getAllRoomsWithBookingDetails();
+            const roomData = res.content || [];
             if (roomData.length > 0) {
                 setRooms(roomData);
                 setAllRooms(roomData);
             }
-        } catch (err) {
-            console.error('Không thể làm mới danh sách phòng:', err);
+        } catch (error) {
+            console.error('Error refreshing room data:', error);
         }
     };
 
@@ -282,6 +309,22 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
             case 'MAINTENANCE': return '#FFEBEE'; // Light red for maintenance rooms
             default: return '#FFFFFF';
         }
+    };
+
+    // Xử lý khi click vào thông tin đặt phòng sắp tới
+    const handleBookingsClick = (event, room) => {
+        event.stopPropagation(); // Ngăn không cho sự kiện lan tỏa lên card phòng
+        console.log('Booking info clicked for room:', room.id);
+        
+        if (room.bookings && room.bookings.length > 0) {
+            setSelectedRoom(room);
+            setBookingListDialogOpen(true);
+        }
+    };
+
+    // Đóng dialog danh sách đặt phòng
+    const handleBookingListDialogClose = () => {
+        setBookingListDialogOpen(false);
     };
 
     return (
@@ -376,7 +419,24 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
                                             <Box sx={{ mb: 1 }}>
                                                 <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Mã đặt phòng: {bookingData.bookingCode}</Typography>
                                                 <Typography variant="body2">Phòng: {bookingData.room}</Typography>
-                                                <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>Khách đặt: {bookingData.customer}</Typography>
+                                                <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+                                                    Khách đặt: {bookingData.customer}
+                                                    {bookingData.bookingCount > 0 && (
+                                                        <Chip
+                                                            label={`${bookingData.bookingCount} đặt trước`}
+                                                            size="small"
+                                                            sx={{
+                                                                backgroundColor: '#FFD700',
+                                                                color: '#333',
+                                                                ml: 1,
+                                                                height: 16,
+                                                                fontSize: '0.7rem',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                            onClick={(e) => handleBookingsClick(e, room)}
+                                                        />
+                                                    )}
+                                                </Typography>
                                                 <Typography variant="body2">Giờ nhận: {bookingData.checkInTime}</Typography>
                                                 <Typography variant="body2">Giờ trả: {bookingData.checkOutTime}</Typography>
                                                 <Typography variant="body2">Tổng cộng: {bookingData.total}đ</Typography>
@@ -418,7 +478,7 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
                 onClose={handleRoomDetailsDialogClose}
                 roomData={selectedRoom && {
                     roomNumber: `P.${selectedRoom?.id?.toString().padStart(3, '0') || '000'}`,
-                    roomType: selectedRoom?.roomCategory?.name || 'Phòng tiêu chuẩn',
+                    roomType: selectedRoom?.roomCategory?.name || selectedRoom?.roomCategoryName || 'Phòng tiêu chuẩn',
                     status: selectedRoom?.status,
                     isClean: selectedRoom?.isClean,
                     customerType: 'Khách lẻ',
@@ -432,7 +492,9 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
                     timeUsed: 'Đã sử dụng: 0 giờ 0 phút',
                     price: selectedRoom?.roomCategory?.dailyPrice?.toLocaleString('vi-VN') || '0',
                     amountPaid: '0',
-                    notes: 'Chưa có ghi chú'
+                    notes: selectedRoom?.note || 'Chưa có ghi chú',
+                    // Truyền thông tin bookings cho component
+                    bookings: selectedRoom?.bookings || []
                 }}
             />
 
@@ -441,6 +503,19 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
                 open={quickBookingDialogOpen}
                 onClose={handleQuickBookingDialogClose}
                 initialRoomData={selectedRoom}
+            />
+
+            {/* Dialog hiển thị danh sách đặt phòng */}
+            <BookingListDialog
+                open={bookingListDialogOpen}
+                onClose={handleBookingListDialogClose}
+                roomData={selectedRoom && {
+                    roomNumber: `P.${selectedRoom?.id?.toString().padStart(3, '0') || '000'}`,
+                    roomType: selectedRoom?.roomCategory?.name || selectedRoom?.roomCategoryName || 'Phòng tiêu chuẩn',
+                    status: selectedRoom?.status,
+                    isClean: selectedRoom?.isClean,
+                }}
+                bookings={selectedRoom?.bookings || []}
             />
         </Box>
     );

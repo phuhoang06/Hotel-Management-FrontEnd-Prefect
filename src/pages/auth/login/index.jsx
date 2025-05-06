@@ -11,9 +11,11 @@ import {
   FormControlLabel, 
   Checkbox,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Avatar
 } from '@mui/material';
 import { Visibility, VisibilityOff, Lock, Person } from '@mui/icons-material';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -146,127 +148,133 @@ const LoginPage = () => {
 
   return (
     <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
+      <Paper 
+        elevation={6}
+        sx={{ 
           marginTop: 8,
+          padding: 4,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          borderRadius: '15px'
         }}
       >
-        <Paper 
-          elevation={3} 
-          sx={{ 
-            p: 4, 
-            width: '100%', 
-            borderRadius: 2,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center'
-          }}
-        >
-          <Typography component="h1" variant="h5" fontWeight="bold" gutterBottom>
-            Đăng nhập
-          </Typography>
-          <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-            Vui lòng đăng nhập để tiếp tục sử dụng hệ thống
-          </Typography>
-          
-          {error && (
-            <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-              {error}
-            </Alert>
-          )}
+        <Avatar sx={{ m: 1, bgcolor: 'primary.main' }}>
+          <LockOutlinedIcon />
+        </Avatar>
+        <Typography component="h1" variant="h5" fontWeight="bold" gutterBottom>
+          Đăng nhập
+        </Typography>
+        
+        {error && (
+          <Alert severity="error" sx={{ width: '100%', mb: 2, mt: 1 }}>
+            {error}
+          </Alert>
+        )}
 
-          <Box component="form" onSubmit={formik.handleSubmit} sx={{ width: '100%' }}>
-            <TextField
-              margin="normal"
-              fullWidth
-              id="username"
-              name="username"
-              label="Tên đăng nhập hoặc Email"
-              autoComplete="username email"
-              autoFocus
-              value={formik.values.username}
-              onChange={formik.handleChange}
-              error={formik.touched.username && Boolean(formik.errors.username)}
-              helperText={formik.touched.username && formik.errors.username}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Person />
-                  </InputAdornment>
-                ),
-              }}
+        <Box component="form" onSubmit={formik.handleSubmit} sx={{ width: '100%', mt: 2 }}>
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            id="username"
+            name="username"
+            label="Tên đăng nhập hoặc Email"
+            autoComplete="username email"
+            autoFocus
+            value={formik.values.username}
+            onChange={formik.handleChange}
+            error={formik.touched.username && Boolean(formik.errors.username)}
+            helperText={formik.touched.username && formik.errors.username}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Person />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ borderRadius: '5px' }}
+          />
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="password"
+            label="Mật khẩu"
+            type={showPassword ? 'text' : 'password'}
+            id="password"
+            autoComplete="current-password"
+            value={formik.values.password}
+            onChange={formik.handleChange}
+            error={formik.touched.password && Boolean(formik.errors.password)}
+            helperText={formik.touched.password && formik.errors.password}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Lock />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={handleClickShowPassword}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
+            sx={{ borderRadius: '5px' }}
+          />
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+            <FormControlLabel
+              control={
+                <Checkbox 
+                  name="rememberMe" 
+                  color="primary" 
+                  checked={formik.values.rememberMe}
+                  onChange={formik.handleChange}
+                />
+              }
+              label="Ghi nhớ đăng nhập"
+              sx={{ '& .MuiTypography-root': { fontSize: '0.9rem' } }}
             />
-            <TextField
-              margin="normal"
-              fullWidth
-              name="password"
-              label="Mật khẩu"
-              type={showPassword ? 'text' : 'password'}
-              id="password"
-              autoComplete="current-password"
-              value={formik.values.password}
-              onChange={formik.handleChange}
-              error={formik.touched.password && Boolean(formik.errors.password)}
-              helperText={formik.touched.password && formik.errors.password}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Lock />
-                  </InputAdornment>
-                ),
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={handleClickShowPassword}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                )
-              }}
-            />
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-              <FormControlLabel
-                control={
-                  <Checkbox 
-                    name="rememberMe" 
-                    color="primary" 
-                    checked={formik.values.rememberMe}
-                    onChange={formik.handleChange}
-                  />
-                }
-                label="Ghi nhớ đăng nhập"
-              />
-              <Typography 
-                variant="body2" 
-                color="primary" 
-                sx={{ cursor: 'pointer' }}
-                onClick={() => {/* Add forgot password handler */}}
-              >
-                Quên mật khẩu?
-              </Typography>
-            </Box>
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2, py: 1.5, borderRadius: 2 }}
-              disabled={loading}
+            <Typography 
+              variant="body2" 
+              color="primary" 
+              sx={{ cursor: 'pointer', fontSize: '0.9rem' }}
+              onClick={() => {/* Add forgot password handler */}}
             >
-              {loading ? (
-                <CircularProgress size={24} color="inherit" />
-              ) : (
-                'Đăng nhập'
-              )}
-            </Button>
+              Quên mật khẩu?
+            </Typography>
           </Box>
-        </Paper>
-      </Box>
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{ 
+              mt: 3, 
+              mb: 2, 
+              p: 1.5,
+              fontSize: '1rem',
+              borderRadius: '10px',
+              backgroundColor: "primary.main",
+              "&:hover": {
+                backgroundColor: "primary.dark",
+              },
+            }}
+            disabled={loading}
+          >
+            {loading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              'Đăng nhập'
+            )}
+          </Button>
+        </Box>
+      </Paper>
     </Container>
   );
 };

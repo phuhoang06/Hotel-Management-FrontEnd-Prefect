@@ -8,9 +8,10 @@ import SearchBar from './SearchBar';
 import ViewModeButtons from './ViewModeButtons';
 import ActionButtons from './ActionButtons';
 import { StatusBar } from './StatusBar';
-import RoomViewService from "../../../service/admin/room.service.js";
+import RoomBookingService from "../../../service/roomBooking.service.js";
 import RoomDetailsDialog from './RoomDetailsDialog';
 import QuickBookingDialog from './QuickBookingDialog';
+    import BookingListDialog from './BookingListDialog';
 
 export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeChange }) {
     const [anchorElSearch, setAnchorElSearch] = useState(null);
@@ -22,29 +23,39 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [roomDetailsDialogOpen, setRoomDetailsDialogOpen] = useState(false);
     const [quickBookingDialogOpen, setQuickBookingDialogOpen] = useState(false);
+    const [bookingListDialogOpen, setBookingListDialogOpen] = useState(false);
     const [menuAnchorEl, setMenuAnchorEl] = useState(null);
     const [menuRoom, setMenuRoom] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-        const fetchRooms = async () => {
-            try {
-                const res = await RoomViewService.getAllRoomView();
-                const roomData = res.data.content || [];
-                if (roomData.length > 0) {
-                    setRooms(roomData);
-                    setAllRooms(roomData);
-                } else {
-                    setRooms(mockRooms);
-                    setAllRooms(mockRooms);
-                }
-            } catch (err) {
-                console.error('Không thể tải danh sách phòng từ API, sử dụng dữ liệu ảo:', err);
-                setRooms(mockRooms);
-                setAllRooms(mockRooms);
-            }
-        };
         fetchRooms();
-    }, []);
+    }, [isLoading]);
+
+    // cap nhat lai loading
+    const handleUpdateLoading = () => {
+        setIsLoading(!isLoading);
+    }
+
+
+    const fetchRooms = async () => {
+        try {
+            const res = await RoomBookingService.getAllRoomsWithBookingDetails();
+            const roomData = res.content || [];
+            console.log(roomData);
+            if (roomData.length > 0) {
+                setRooms(roomData);
+                setAllRooms(roomData);
+            } else {
+                setRooms([]);
+                setAllRooms([]);
+            }
+        } catch (err) {
+            console.error('Không thể tải danh sách phòng từ API, sử dụng dữ liệu ảo:', err);
+            setRooms([]);
+            setAllRooms([]);
+        }
+    };
 
     const handleSearchClick = (event) => {
         setAnchorElSearch(event.currentTarget);
@@ -156,7 +167,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
             console.log(`Changing room ${menuRoom.id} cleaning status to: ${newCleanStatus ? 'Đã dọn' : 'Chưa dọn'}`);
             
             // Update room cleaning status via API
-            await RoomViewService.updateRoomCleanStatus(menuRoom.id, newCleanStatus);
+            await RoomBookingService.updateRoomCleanStatus(menuRoom.id, newCleanStatus);
             
             // Update the local state
             const updatedRooms = rooms.map(room => 
@@ -219,14 +230,14 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
     // Làm mới dữ liệu phòng từ API
     const refreshRoomData = async () => {
         try {
-            const res = await RoomViewService.getAllRoomView();
-            const roomData = res.data.content || [];
+            const res = await RoomBookingService.getAllRoomsWithBookingDetails();
+            const roomData = res.content || [];
             if (roomData.length > 0) {
                 setRooms(roomData);
                 setAllRooms(roomData);
             }
-        } catch (err) {
-            console.error('Không thể làm mới danh sách phòng:', err);
+        } catch (error) {
+            console.error('Error refreshing room data:', error);
         }
     };
 
@@ -240,6 +251,22 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
     const handleQuickBookingDialogClose = () => {
         setQuickBookingDialogOpen(false);
         refreshRoomData(); // Làm mới dữ liệu phòng sau khi đóng dialog
+    };
+
+    // Xử lý khi click vào phần đặt phòng sắp tới hoặc nhãn đặt trước
+    const handleBookingsClick = (event, room) => {
+        event.stopPropagation(); // Ngăn không cho sự kiện lan tỏa lên card phòng
+        console.log('Booking info clicked for room:', room.id);
+        
+        if (room.bookings && room.bookings.length > 0) {
+            setSelectedRoom(room);
+            setBookingListDialogOpen(true);
+        }
+    };
+
+    // Đóng dialog danh sách đặt phòng
+    const handleBookingListDialogClose = () => {
+        setBookingListDialogOpen(false);
     };
 
     return (
@@ -336,6 +363,20 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                                     fontWeight: 'bold',
                                                 }}
                                             />
+                                            {room.bookings && room.bookings.length > 0 && (
+                                                <Chip
+                                                    label={`Đặt trước: ${room.bookings.length}`}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: '#FFD700',
+                                                        color: '#333',
+                                                        fontWeight: 'bold',
+                                                        marginRight: 1,
+                                                        cursor: 'pointer'
+                                                    }}
+                                                    onClick={(e) => handleBookingsClick(e, room)}
+                                                />
+                                            )}
                                             <IconButton 
                                                 size="small" 
                                                 sx={{ color: 'inherit' }}
@@ -354,7 +395,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                                     fontSize: '1.2rem',
                                                 }}
                                             >
-                                                {roomCategory.code || 'N/A'}
+                                                {room.roomCategory?.code || `P${room.id.toString().padStart(3, '0')}`}
                                             </Typography>
                                         </Box>
                                         <Typography
@@ -368,7 +409,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                                 textOverflow: 'ellipsis',
                                             }}
                                         >
-                                            {roomCategory.name || 'Không có loại phòng'}
+                                            {room.roomCategory?.name || room.roomCategoryName || 'Không có loại phòng'}
                                         </Typography>
                                         <Typography
                                             variant="body2"
@@ -382,8 +423,72 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                                 textOverflow: 'ellipsis',
                                             }}
                                         >
-                                            {roomCategory.description || 'Không có mô tả'}
+                                            {room.roomCategory?.description || room.note || 'Không có mô tả'}
                                         </Typography>
+                                        
+                                        {/* Hiển thị lịch đặt phòng sắp tới nếu có */}
+                                        {room.bookings && room.bookings.length > 0 && (
+                                            <Box 
+                                                sx={{ 
+                                                    mb: 1, 
+                                                    p: 1, 
+                                                    backgroundColor: 'rgba(255, 215, 0, 0.1)', 
+                                                    borderRadius: 1,
+                                                    cursor: 'pointer',
+                                                    '&:hover': {
+                                                        backgroundColor: 'rgba(255, 215, 0, 0.2)',
+                                                    }
+                                                }}
+                                                onClick={(e) => handleBookingsClick(e, room)}
+                                            >
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        fontWeight: 'bold',
+                                                        fontSize: '0.8rem',
+                                                    }}
+                                                >
+                                                    Đặt phòng sắp tới:
+                                                </Typography>
+                                                {room.bookings.slice(0, 1).map((booking, idx) => {
+                                                    // Định dạng thời gian checkin
+                                                    const checkinTime = booking.checkinTime && Array.isArray(booking.checkinTime) 
+                                                        ? new Date(
+                                                            booking.checkinTime[0], 
+                                                            booking.checkinTime[1] - 1, 
+                                                            booking.checkinTime[2],
+                                                            booking.checkinTime[3] || 0,
+                                                            booking.checkinTime[4] || 0
+                                                        ).toLocaleString('vi-VN')
+                                                        : 'Chưa rõ';
+                                                    
+                                                    return (
+                                                        <Typography
+                                                            key={idx}
+                                                            variant="body2"
+                                                            sx={{
+                                                                fontSize: '0.75rem',
+                                                                color: '#555',
+                                                            }}
+                                                        >
+                                                            Ngày nhận: {checkinTime}
+                                                        </Typography>
+                                                    );
+                                                })}
+                                                {room.bookings.length > 1 && (
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{
+                                                            fontSize: '0.75rem',
+                                                            fontStyle: 'italic'
+                                                        }}
+                                                    >
+                                                        ... và {room.bookings.length - 1} đặt phòng khác
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                        )}
+                                        
                                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                 <AccessTimeIcon fontSize="small" sx={{ color: 'inherit' }} />
@@ -391,7 +496,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                                     variant="body2"
                                                     sx={{ color: 'inherit', fontSize: '0.9rem' }}
                                                 >
-                                                    {roomCategory.hourlyPrice?.toLocaleString('vi-VN', { style: 'decimal' }) || '0'}đ
+                                                    {room.roomCategory?.hourlyPrice?.toLocaleString('vi-VN', { style: 'decimal' }) || '0'}đ
                                                 </Typography>
                                             </Box>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -400,7 +505,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                                     variant="body2"
                                                     sx={{ color: 'inherit', fontSize: '0.9rem' }}
                                                 >
-                                                    {roomCategory.dailyPrice?.toLocaleString('vi-VN', { style: 'decimal' }) || '0'}đ
+                                                    {room.roomCategory?.dailyPrice?.toLocaleString('vi-VN', { style: 'decimal' }) || '0'}đ
                                                 </Typography>
                                             </Box>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -409,7 +514,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                                                     variant="body2"
                                                     sx={{ color: 'inherit', fontSize: '0.9rem' }}
                                                 >
-                                                    {roomCategory.overnightPrice?.toLocaleString('vi-VN', { style: 'decimal' }) || '0'}đ
+                                                    {room.roomCategory?.overnightPrice?.toLocaleString('vi-VN', { style: 'decimal' }) || '0'}đ
                                                 </Typography>
                                             </Box>
                                         </Box>
@@ -442,7 +547,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                 onClose={handleRoomDetailsDialogClose}
                 roomData={selectedRoom && {
                     roomNumber: `P.${selectedRoom?.id?.toString().padStart(3, '0') || '000'}`,
-                    roomType: selectedRoom?.roomCategory?.name || 'Phòng tiêu chuẩn',
+                    roomType: selectedRoom?.roomCategory?.name || selectedRoom?.roomCategoryName || 'Phòng tiêu chuẩn',
                     status: selectedRoom?.status,
                     isClean: selectedRoom?.isClean,
                     customerType: 'Khách lẻ',
@@ -456,15 +561,30 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                     timeUsed: 'Đã sử dụng: 0 giờ 0 phút',
                     price: selectedRoom?.roomCategory?.dailyPrice?.toLocaleString('vi-VN') || '0',
                     amountPaid: '0',
-                    notes: 'Chưa có ghi chú'
+                    notes: selectedRoom?.note || 'Chưa có ghi chú',
+                    bookings: selectedRoom?.bookings || []
                 }}
             />
 
             {/* Dialog đặt phòng nhanh cho phòng trống */}
             <QuickBookingDialog
+                handleUpdateLoading = {handleUpdateLoading}
                 open={quickBookingDialogOpen}
                 onClose={handleQuickBookingDialogClose}
                 initialRoomData={selectedRoom}
+            />
+
+            {/* Dialog hiển thị danh sách đặt phòng */}
+            <BookingListDialog
+                open={bookingListDialogOpen}
+                onClose={handleBookingListDialogClose}
+                roomData={selectedRoom && {
+                    roomNumber: `P.${selectedRoom?.id?.toString().padStart(3, '0') || '000'}`,
+                    roomType: selectedRoom?.roomCategory?.name || selectedRoom?.roomCategoryName || 'Phòng tiêu chuẩn',
+                    status: selectedRoom?.status,
+                    isClean: selectedRoom?.isClean,
+                }}
+                bookings={selectedRoom?.bookings || []}
             />
         </Box>
     );

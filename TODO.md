@@ -60,3 +60,11 @@
   - Prevented dialog from closing when interacting with content
   - Improved event handlers for different close scenarios
   - Maintained expected user interaction patterns 
+
+- [ ] Implement enhanced room booking service with detailed booking information
+  - [x] Create new roomBooking.service.js with API connection to /rooms/with-booking-details
+  - [x] Update SchematicView, ListView, and GridView components to use new service
+  - [x] Implement additional data display in room cards
+  - [x] Update room status logic to handle enhanced data
+  - [x] Add booking list dialog to display all upcoming bookings for a room
+  - [ ] Test integration with all room booking components 

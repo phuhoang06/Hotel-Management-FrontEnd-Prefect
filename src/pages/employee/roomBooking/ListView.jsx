@@ -5,9 +5,10 @@ import SearchBar from './SearchBar';
 import ViewModeButtons from './ViewModeButtons';
 import ActionButtons from './ActionButtons';
 import { StatusBar } from './StatusBar';
-import RoomViewService from "../../../service/admin/room.service.js";
+import RoomBookingService from "../../../service/roomBooking.service.js";
 import QuickBookingDialog from './QuickBookingDialog';
 import RoomDetailsDialog from './RoomDetailsDialog';
+import BookingListDialog from './BookingListDialog';
 
 export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange }) {
     const [anchorElSearch, setAnchorElSearch] = useState(null);
@@ -19,14 +20,15 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [roomDetailsDialogOpen, setRoomDetailsDialogOpen] = useState(false);
     const [quickBookingDialogOpen, setQuickBookingDialogOpen] = useState(false);
+    const [bookingListDialogOpen, setBookingListDialogOpen] = useState(false);
     const [menuAnchorEl, setMenuAnchorEl] = useState(null);
     const [menuRoom, setMenuRoom] = useState(null);
 
     useEffect(() => {
         const fetchRooms = async () => {
             try {
-                const res = await RoomViewService.getAllRoomView();
-                const roomData = res.data.content || [];
+                const res = await RoomBookingService.getAllRoomsWithBookingDetails();
+                const roomData = res.content || [];
                 setRooms(roomData);
                 setAllRooms(roomData);
             } catch (err) {
@@ -84,16 +86,39 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
     const getBookingData = (room, index) => {
         const roomCategory = room.roomCategory || {};
         const dailyPrice = roomCategory.dailyPrice || 0;
-        const checkInTime = room.startDate
-            ? new Date(room.startDate[0], room.startDate[1] - 1, room.startDate[2]).toLocaleDateString('vi-VN')
-            : '';
-        const checkOutTime = room.checkInDuration && room.startDate
+        
+        // Sử dụng thông tin booking từ API mới nếu có
+        const upcomingBooking = room.bookings && room.bookings.length > 0 
+            ? room.bookings[0] // Lấy booking đầu tiên
+            : null;
+            
+        const checkInTime = upcomingBooking?.checkinTime
             ? new Date(
-                room.startDate[0],
-                room.startDate[1] - 1,
-                room.startDate[2] + room.checkInDuration
-            ).toLocaleDateString('vi-VN')
-            : '';
+                upcomingBooking.checkinTime[0], 
+                upcomingBooking.checkinTime[1] - 1, 
+                upcomingBooking.checkinTime[2],
+                upcomingBooking.checkinTime[3] || 0,
+                upcomingBooking.checkinTime[4] || 0
+              ).toLocaleDateString('vi-VN')
+            : (room.startDate
+                ? new Date(room.startDate[0], room.startDate[1] - 1, room.startDate[2]).toLocaleDateString('vi-VN')
+                : '');
+                
+        const checkOutTime = upcomingBooking?.checkoutTime
+            ? new Date(
+                upcomingBooking.checkoutTime[0], 
+                upcomingBooking.checkoutTime[1] - 1, 
+                upcomingBooking.checkoutTime[2],
+                upcomingBooking.checkoutTime[3] || 0,
+                upcomingBooking.checkoutTime[4] || 0
+              ).toLocaleDateString('vi-VN')
+            : (room.checkInDuration && room.startDate
+                ? new Date(
+                    room.startDate[0],
+                    room.startDate[1] - 1,
+                    room.startDate[2] + room.checkInDuration
+                  ).toLocaleDateString('vi-VN')
+                : '');
 
         return {
             stt: index + 1,
@@ -106,6 +131,8 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
             total: dailyPrice.toLocaleString('vi-VN'),
             paid: "0",
             action: getActionButton(statusToAction(room.status, room.isClean)),
+            // Thêm thông tin số booking
+            bookingCount: room.bookings ? room.bookings.length : 0
         };
     };
 
@@ -147,8 +174,8 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
             if (status === 'ALL') {
                 setRooms(allRooms);
             } else {
-                const response = await RoomViewService.searchRoomView({ status });
-                const roomData = response.data.content || [];
+                const response = await RoomBookingService.searchRoomsWithBookingDetails({ status });
+                const roomData = response.content || [];
                 setRooms(roomData);
             }
         } catch (error) {
@@ -178,7 +205,7 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
             console.log(`Changing room ${menuRoom.id} cleaning status to: ${newCleanStatus ? 'Đã dọn' : 'Chưa dọn'}`);
             
             // Update room cleaning status via API
-            await RoomViewService.updateRoomCleanStatus(menuRoom.id, newCleanStatus);
+            await RoomBookingService.updateRoomCleanStatus(menuRoom.id, newCleanStatus);
             
             // Update the local state
             const updatedRooms = rooms.map(room => 
@@ -241,14 +268,14 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
     // Làm mới dữ liệu phòng từ API
     const refreshRoomData = async () => {
         try {
-            const res = await RoomViewService.getAllRoomView();
-            const roomData = res.data.content || [];
+            const res = await RoomBookingService.getAllRoomsWithBookingDetails();
+            const roomData = res.content || [];
             if (roomData.length > 0) {
                 setRooms(roomData);
                 setAllRooms(roomData);
             }
-        } catch (err) {
-            console.error('Không thể làm mới danh sách phòng:', err);
+        } catch (error) {
+            console.error('Error refreshing room data:', error);
         }
     };
 
@@ -275,6 +302,22 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
             case 'MAINTENANCE': return '#FFEBEE'; // Light red for maintenance rooms
             default: return '#FFFFFF';
         }
+    };
+
+    // Xử lý khi click vào thông tin đặt phòng sắp tới
+    const handleBookingsClick = (event, room) => {
+        event.stopPropagation(); // Ngăn không cho sự kiện lan tỏa lên card phòng
+        console.log('Booking info clicked for room:', room.id);
+        
+        if (room.bookings && room.bookings.length > 0) {
+            setSelectedRoom(room);
+            setBookingListDialogOpen(true);
+        }
+    };
+
+    // Đóng dialog danh sách đặt phòng
+    const handleBookingListDialogClose = () => {
+        setBookingListDialogOpen(false);
     };
 
     return (
@@ -362,7 +405,26 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
                                                 <TableCell>{bookingData.bookingCode}</TableCell>
                                                 <TableCell>{bookingData.channelCode}</TableCell>
                                                 <TableCell>{bookingData.room}</TableCell>
-                                                <TableCell sx={{ whiteSpace: 'pre-line' }}>{bookingData.customer}</TableCell>
+                                                <TableCell sx={{ whiteSpace: 'pre-line' }}>
+                                                    {bookingData.customer}
+                                                    {bookingData.bookingCount > 0 && (
+                                                        <Box sx={{
+                                                            display: 'inline-block',
+                                                            backgroundColor: '#FFD700', 
+                                                            borderRadius: '50%', 
+                                                            width: 20, 
+                                                            height: 20, 
+                                                            fontSize: '0.75rem',
+                                                            textAlign: 'center', 
+                                                            lineHeight: '20px',
+                                                            ml: 1,
+                                                            cursor: 'pointer'
+                                                        }}
+                                                        onClick={(e) => handleBookingsClick(e, room)}>
+                                                            {bookingData.bookingCount}
+                                                        </Box>
+                                                    )}
+                                                </TableCell>
                                                 <TableCell>{bookingData.checkInTime}</TableCell>
                                                 <TableCell>{bookingData.checkOutTime}</TableCell>
                                                 <TableCell>{bookingData.total}đ</TableCell>
@@ -407,7 +469,7 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
                 onClose={handleRoomDetailsDialogClose}
                 roomData={selectedRoom && {
                     roomNumber: `P.${selectedRoom?.id?.toString().padStart(3, '0') || '000'}`,
-                    roomType: selectedRoom?.roomCategory?.name || 'Phòng tiêu chuẩn',
+                    roomType: selectedRoom?.roomCategory?.name || selectedRoom?.roomCategoryName || 'Phòng tiêu chuẩn',
                     status: selectedRoom?.status,
                     isClean: selectedRoom?.isClean,
                     customerType: 'Khách lẻ',
@@ -421,7 +483,9 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
                     timeUsed: 'Đã sử dụng: 0 giờ 0 phút',
                     price: selectedRoom?.roomCategory?.dailyPrice?.toLocaleString('vi-VN') || '0',
                     amountPaid: '0',
-                    notes: 'Chưa có ghi chú'
+                    notes: selectedRoom?.note || 'Chưa có ghi chú',
+                    // Truyền thông tin bookings cho component
+                    bookings: selectedRoom?.bookings || []
                 }}
             />
 
@@ -430,6 +494,19 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
                 open={quickBookingDialogOpen}
                 onClose={handleQuickBookingDialogClose}
                 initialRoomData={selectedRoom}
+            />
+            
+            {/* Dialog hiển thị danh sách đặt phòng */}
+            <BookingListDialog
+                open={bookingListDialogOpen}
+                onClose={handleBookingListDialogClose}
+                roomData={selectedRoom && {
+                    roomNumber: `P.${selectedRoom?.id?.toString().padStart(3, '0') || '000'}`,
+                    roomType: selectedRoom?.roomCategory?.name || selectedRoom?.roomCategoryName || 'Phòng tiêu chuẩn',
+                    status: selectedRoom?.status,
+                    isClean: selectedRoom?.isClean,
+                }}
+                bookings={selectedRoom?.bookings || []}
             />
         </Box>
     );
