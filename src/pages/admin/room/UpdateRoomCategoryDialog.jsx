@@ -125,9 +125,9 @@ const UpdateRoomCategoryDialog = ({ open, onClose, onSuccess, category }) => {
                     extraFeeType: values.extraFeeType || null,
                 };
 
-                await RoomViewService.updateRoomCategory(category.id, roomCategoryData, imageFile);
+                const response = await RoomViewService.updateRoomCategory(category.id, roomCategoryData, imageFile);
                 toast.success('Cập nhật hạng phòng thành công');
-                onSuccess();
+                onSuccess(response.data);
                 onClose();
             } catch (error) {
                 console.error('Lỗi khi cập nhật hạng phòng:', error);
@@ -146,7 +146,6 @@ const UpdateRoomCategoryDialog = ({ open, onClose, onSuccess, category }) => {
         },
     });
 
-    // Điền dữ liệu hạng phòng khi component mở
     useEffect(() => {
         if (category) {
             formik.setValues({
@@ -169,13 +168,24 @@ const UpdateRoomCategoryDialog = ({ open, onClose, onSuccess, category }) => {
                 imgUrl: category.imgUrl || '',
             });
             setImagePreview(category.imgUrl ? (category.imgUrl.startsWith('http') ? category.imgUrl : `http://localhost:8080/${category.imgUrl}`) : null);
+            setImageFile(null);
+        } else {
+            setImagePreview(null);
+            setImageFile(null);
         }
-    }, [category, formik.setValues]);
+    }, [category]);
 
-    // Xử lý chọn ảnh
     const handleImageChange = (event) => {
         const file = event.target.files[0];
         if (file) {
+            if (!['image/jpeg', 'image/png'].includes(file.type)) {
+                toast.error('Chỉ hỗ trợ định dạng JPEG hoặc PNG');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error('Kích thước tệp không được vượt quá 5MB');
+                return;
+            }
             setImageFile(file);
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -185,8 +195,15 @@ const UpdateRoomCategoryDialog = ({ open, onClose, onSuccess, category }) => {
         }
     };
 
+    const handleClose = () => {
+        setImagePreview(null);
+        setImageFile(null);
+        formik.resetForm();
+        onClose();
+    };
+
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+        <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
             <DialogTitle sx={{ fontSize: '1.25rem' }}>Cập nhật hạng phòng</DialogTitle>
             <DialogContent>
                 <form onSubmit={formik.handleSubmit}>
@@ -424,7 +441,7 @@ const UpdateRoomCategoryDialog = ({ open, onClose, onSuccess, category }) => {
                 </form>
             </DialogContent>
             <DialogActions>
-                <Button onClick={onClose} color="inherit" size="small">
+                <Button onClick={handleClose} color="inherit" size="small">
                     Hủy
                 </Button>
                 <Button
