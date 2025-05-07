@@ -29,8 +29,8 @@ const validationSchema = Yup.object({
     status: Yup.string()
         .required('Tình trạng là bắt buộc')
         .oneOf(
-            ['AVAILABLE', 'MAINTENANCE'],
-            'Tình trạng phải là "Trống" hoặc "Bảo trì"'
+            ['AVAILABLE', 'UPCOMING', 'IN_USE', 'CHECKOUT_SOON', 'MAINTENANCE', 'OVERDUE'],
+            'Tình trạng không hợp lệ'
         ),
     isClean: Yup.boolean().required('Trạng thái dọn dẹp là bắt buộc'),
     floor: Yup.number()
@@ -47,20 +47,25 @@ const validationSchema = Yup.object({
     images: Yup.array()
         .of(
             Yup.mixed()
+                .nullable() // Allow null values
                 .test('fileSize', 'Kích thước ảnh không được vượt quá 5MB', (value) =>
-                    !value || value.size <= 5 * 1024 * 1024
+                    !value || (value instanceof File && value.size <= 5 * 1024 * 1024)
                 )
                 .test('fileType', 'Chỉ hỗ trợ định dạng ảnh (jpg, jpeg, png)', (value) =>
-                    !value || ['image/jpeg', 'image/png'].includes(value.type)
+                    !value || (value instanceof File && ['image/jpeg', 'image/png'].includes(value.type))
+                )
+                .test('isValidUrlOrFile', 'Phải là file ảnh hoặc URL hợp lệ', (value) =>
+                    !value || value instanceof File || (typeof value === 'string' && value.trim().length > 0)
                 )
         )
         .max(4, 'Tối đa 4 ảnh'),
 });
 
-function AddRoomDialog({ open, onClose, onSuccess }) {
+function UpdateRoomDialog({ open, onClose, onSuccess, room }) {
     const [roomCategories, setRoomCategories] = useState([]);
     const [loadingCategories, setLoadingCategories] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [existingImages, setExistingImages] = useState([null, null, null, null]); // To store existing image URLs
 
     // Load room categories
     useEffect(() => {
@@ -81,18 +86,34 @@ function AddRoomDialog({ open, onClose, onSuccess }) {
         }
     }, [open]);
 
+    // Initialize existing images from room data
+    useEffect(() => {
+        if (room) {
+            const images = [
+                room.img1 || null,
+                room.img2 || null,
+                room.img3 || null,
+                room.img4 || null,
+            ];
+            setExistingImages(images);
+            // Initialize formik.values.images with existing image URLs
+            formik.setFieldValue('images', images.map(img => img || null));
+        }
+    }, [room]);
+
     // Formik setup
     const formik = useFormik({
         initialValues: {
-            roomCategoryId: '',
-            status: 'AVAILABLE',
-            isClean: true,
-            floor: '',
-            note: '',
-            startDate: '',
-            checkInDuration: 0,
-            images: [null, null, null, null], // Array for 4 images
+            roomCategoryId: room?.roomCategory?.id || '',
+            status: room?.status || 'AVAILABLE',
+            isClean: room?.isClean || false,
+            floor: room?.floor || '',
+            note: room?.note || '',
+            startDate: room?.startDate ? new Date(room.startDate).toISOString().split('T')[0] : '',
+            checkInDuration: room?.checkInDuration || 0,
+            images: [null, null, null, null], // Will be overridden by useEffect
         },
+        enableReinitialize: true, // Reinitialize form when room prop changes
         validationSchema,
         onSubmit: async (values) => {
             setLoading(true);
@@ -108,22 +129,26 @@ function AddRoomDialog({ open, onClose, onSuccess }) {
                     checkInDuration: values.checkInDuration || 0,
                 };
 
-                // Prepare images
-                const images = {
-                    img1: values.images[0],
-                    img2: values.images[1],
-                    img3: values.images[2],
-                    img4: values.images[3],
-                };
+                // Prepare images - include existing images if no new image is uploaded
+                const images = {};
+                values.images.forEach((image, index) => {
+                    const imgKey = `img${index + 1}`;
+                    if (image instanceof File) {
+                        images[imgKey] = image; // Send new image if uploaded
+                    } else if (typeof image === 'string' && image) {
+                        images[imgKey] = image; // Send existing image URL if no change
+                    }
+                });
 
-                // Call API
-                await RoomViewService.addRoom(roomData, images);
-                toast.success('Thêm phòng thành công');
+                // Call API to update room
+                await RoomViewService.updateRoom(room.id, roomData, images);
+                toast.success('Cập nhật phòng thành công');
                 formik.resetForm();
+                setExistingImages([null, null, null, null]); // Reset existing images
                 onSuccess();
                 onClose();
             } catch (err) {
-                let errorMessage = 'Không thể thêm phòng';
+                let errorMessage = 'Không thể cập nhật phòng';
                 if (err.response) {
                     if (err.response.status === 400) {
                         errorMessage =
@@ -135,7 +160,9 @@ function AddRoomDialog({ open, onClose, onSuccess }) {
                             ).join(', ');
                         }
                     } else if (err.response.status === 403) {
-                        errorMessage = 'Bạn không có quyền thêm phòng';
+                        errorMessage = 'Bạn không có quyền cập nhật phòng';
+                    } else if (err.response.status === 404) {
+                        errorMessage = 'Phòng không tồn tại';
                     } else {
                         errorMessage =
                             err.response.data.message || err.message;
@@ -156,6 +183,11 @@ function AddRoomDialog({ open, onClose, onSuccess }) {
         const newImages = [...formik.values.images];
         newImages[index] = file || null;
         formik.setFieldValue('images', newImages);
+
+        // Update existing images (remove the existing image URL when a new file is selected)
+        const newExistingImages = [...existingImages];
+        newExistingImages[index] = null;
+        setExistingImages(newExistingImages);
     };
 
     // Handle image removal
@@ -163,6 +195,10 @@ function AddRoomDialog({ open, onClose, onSuccess }) {
         const newImages = [...formik.values.images];
         newImages[index] = null;
         formik.setFieldValue('images', newImages);
+
+        const newExistingImages = [...existingImages];
+        newExistingImages[index] = null;
+        setExistingImages(newExistingImages);
     };
 
     return (
@@ -173,7 +209,7 @@ function AddRoomDialog({ open, onClose, onSuccess }) {
             fullWidth
         >
             <DialogTitle sx={{ fontSize: '1rem', fontWeight: 'bold' }}>
-                Thêm phòng mới
+                Cập nhật phòng
             </DialogTitle>
             <DialogContent dividers>
                 <form onSubmit={formik.handleSubmit}>
@@ -274,10 +310,34 @@ function AddRoomDialog({ open, onClose, onSuccess }) {
                                         Trống
                                     </MenuItem>
                                     <MenuItem
+                                        value="UPCOMING"
+                                        sx={{ fontSize: '0.875rem' }}
+                                    >
+                                        Sắp tới
+                                    </MenuItem>
+                                    <MenuItem
+                                        value="IN_USE"
+                                        sx={{ fontSize: '0.875rem' }}
+                                    >
+                                        Đang sử dụng
+                                    </MenuItem>
+                                    <MenuItem
+                                        value="CHECKOUT_SOON"
+                                        sx={{ fontSize: '0.875rem' }}
+                                    >
+                                        Sắp trả phòng
+                                    </MenuItem>
+                                    <MenuItem
                                         value="MAINTENANCE"
                                         sx={{ fontSize: '0.875rem' }}
                                     >
                                         Bảo trì
+                                    </MenuItem>
+                                    <MenuItem
+                                        value="OVERDUE"
+                                        sx={{ fontSize: '0.875rem' }}
+                                    >
+                                        Quá hạn
                                     </MenuItem>
                                 </Select>
                                 {formik.touched.status &&
@@ -388,10 +448,10 @@ function AddRoomDialog({ open, onClose, onSuccess }) {
                                     gutterBottom
                                     sx={{ fontSize: '0.8rem' }}
                                 >
-                                    Tải ảnh phòng (tối đa 4 ảnh, định dạng JPG/PNG, tối đa 5MB mỗi ảnh)
+                                    Ảnh phòng (tối đa 4 ảnh, định dạng JPG/PNG, tối đa 5MB mỗi ảnh)
                                 </Typography>
                                 <Grid container spacing={2}>
-                                    {formik.values.images.map((image, index) => (
+                                    {[...Array(4)].map((_, index) => (
                                         <Grid item xs={3} key={index}>
                                             <Box
                                                 sx={{
@@ -402,31 +462,55 @@ function AddRoomDialog({ open, onClose, onSuccess }) {
                                                     position: 'relative',
                                                 }}
                                             >
-                                                {image ? (
+                                                {existingImages[index] ? (
                                                     <>
                                                         <img
-                                                            src={URL.createObjectURL(
-                                                                image
-                                                            )}
-                                                            alt={`Preview ${index + 1}`}
+                                                            src={
+                                                                existingImages[index].startsWith('http')
+                                                                    ? existingImages[index]
+                                                                    : `http://localhost:8080/${existingImages[index]}`
+                                                            }
+                                                            alt={`Existing ${index + 1}`}
                                                             style={{
                                                                 width: '100%',
                                                                 height: '100px',
-                                                                objectFit:
-                                                                    'cover',
-                                                                borderRadius:
-                                                                    '4px',
+                                                                objectFit: 'cover',
+                                                                borderRadius: '4px',
                                                             }}
                                                         />
                                                         <Button
                                                             size="small"
                                                             color="error"
-                                                            onClick={handleRemoveImage(
-                                                                index
-                                                            )}
+                                                            onClick={handleRemoveImage(index)}
                                                             sx={{
-                                                                position:
-                                                                    'absolute',
+                                                                position: 'absolute',
+                                                                top: 0,
+                                                                right: 0,
+                                                                minWidth: 'auto',
+                                                                p: 0.5,
+                                                            }}
+                                                        >
+                                                            X
+                                                        </Button>
+                                                    </>
+                                                ) : formik.values.images[index] ? (
+                                                    <>
+                                                        <img
+                                                            src={URL.createObjectURL(formik.values.images[index])}
+                                                            alt={`Preview ${index + 1}`}
+                                                            style={{
+                                                                width: '100%',
+                                                                height: '100px',
+                                                                objectFit: 'cover',
+                                                                borderRadius: '4px',
+                                                            }}
+                                                        />
+                                                        <Button
+                                                            size="small"
+                                                            color="error"
+                                                            onClick={handleRemoveImage(index)}
+                                                            sx={{
+                                                                position: 'absolute',
                                                                 top: 0,
                                                                 right: 0,
                                                                 minWidth: 'auto',
@@ -448,9 +532,7 @@ function AddRoomDialog({ open, onClose, onSuccess }) {
                                                             type="file"
                                                             accept="image/jpeg,image/png"
                                                             hidden
-                                                            onChange={handleImageChange(
-                                                                index
-                                                            )}
+                                                            onChange={handleImageChange(index)}
                                                         />
                                                     </Button>
                                                 )}
@@ -463,9 +545,7 @@ function AddRoomDialog({ open, onClose, onSuccess }) {
                                                         variant="caption"
                                                         sx={{ mt: 0.5 }}
                                                     >
-                                                        {formik.errors.images[
-                                                            index
-                                                            ]}
+                                                        {formik.errors.images[index]}
                                                     </Typography>
                                                 )}
                                         </Grid>
@@ -480,6 +560,7 @@ function AddRoomDialog({ open, onClose, onSuccess }) {
                 <Button
                     onClick={() => {
                         formik.resetForm();
+                        setExistingImages([null, null, null, null]);
                         onClose();
                     }}
                     color="inherit"
@@ -498,7 +579,7 @@ function AddRoomDialog({ open, onClose, onSuccess }) {
                     {loading ? (
                         <CircularProgress size={20} />
                     ) : (
-                        'Lưu'
+                        'Cập nhật'
                     )}
                 </Button>
             </DialogActions>
@@ -506,4 +587,4 @@ function AddRoomDialog({ open, onClose, onSuccess }) {
     );
 }
 
-export default AddRoomDialog;
+export default UpdateRoomDialog;

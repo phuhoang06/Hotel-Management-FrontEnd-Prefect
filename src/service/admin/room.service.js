@@ -30,22 +30,67 @@ class RoomViewService {
     /**
      * Thêm phòng mới
      */
-    static async addRoom(roomData) {
-        return await axiosInstance.post('/rooms', roomData);
+    static async addRoom(roomData, images = {}) {
+        const formData = new FormData();
+        // Gửi room data dưới dạng chuỗi JSON
+        formData.append('room', JSON.stringify(roomData));
+        // Gửi các file ảnh (nếu có)
+        if (images.img1) formData.append('img1', images.img1);
+        if (images.img2) formData.append('img2', images.img2);
+        if (images.img3) formData.append('img3', images.img3);
+        if (images.img4) formData.append('img4', images.img4);
+
+        return await axiosInstance.post('/rooms', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
     }
 
+    static async addRoomCategory(roomCategoryData, imageFile) {
+        const formData = new FormData();
+        formData.append('roomCategory', JSON.stringify(roomCategoryData));
+        if (imageFile) {
+            formData.append('img', imageFile);
+        }
+        return await axiosInstance.post('/room-categories', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+    }
     /**
      * Cập nhật thông tin phòng
      */
-    static async updateRoom(id, roomData) {
-        return await axiosInstance.put(`/rooms/${id}`, roomData);
+    static async updateRoom(id, roomData, images = {}) {
+        const formData = new FormData();
+        formData.append('room', JSON.stringify(roomData));
+
+        // Handle images, supporting both files (new images) and strings (existing image URLs)
+        ['img1', 'img2', 'img3', 'img4'].forEach((key) => {
+            if (key in images) {
+                const value = images[key];
+                if (value instanceof File) {
+                    formData.append(key, value); // Send new image file
+                } else if (typeof value === 'string' && value) {
+                    formData.append(key, value); // Send existing image URL
+                }
+                // If value is null or undefined, do not append (indicates deletion)
+            }
+        });
+
+        return await axiosInstance.put(`/rooms/${id}/edit`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
     }
 
     /**
      * Xóa phòng
      */
     static async deleteRoom(id) {
-        return await axiosInstance.delete(`/rooms/${id}`);
+        return await axiosInstance.delete(`/rooms/${id}/delete`);
     }
 
     /**
