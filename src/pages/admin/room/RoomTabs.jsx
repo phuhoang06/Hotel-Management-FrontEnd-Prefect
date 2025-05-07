@@ -34,6 +34,7 @@ import AddRoomDialog from './AddRoomDialog.jsx';
 import UpdateRoomCategoryDialog from './UpdateRoomCategoryDialog.jsx';
 import UpdateRoomDialog from './UpdateRoomDialog.jsx';
 import { debounce } from 'lodash';
+import PermissionGuard from "../../../components/PermissionGuard.jsx";
 
 const placeholderImage = 'https://via.placeholder.com/200x150?text=No+Image';
 
@@ -513,6 +514,8 @@ export default function RoomTabs() {
             </Paper>
 
             {/* Dialog thêm hạng phòng */}
+            <PermissionGuard permissions="CREATE_ROOM_CATEGORY">
+
             <AddRoomCategoryDialog
                 open={openRoomCategoryDialog}
                 onClose={handleCloseRoomCategoryDialog}
@@ -521,15 +524,19 @@ export default function RoomTabs() {
                     filteredCategories(page);
                 }}
             />
-
+            </PermissionGuard>
             {/* Dialog thêm phòng */}
+            <PermissionGuard permissions="CREATE_ROOM">
+
             <AddRoomDialog
                 open={openRoomDialog}
                 onClose={handleCloseRoomDialog}
                 onSuccess={() => filteredRooms(page)}
             />
-
+            </PermissionGuard>
             {/* Dialog cập nhật hạng phòng */}
+            <PermissionGuard permissions="UPDATE_ROOM_CATEGORY">
+
             <UpdateRoomCategoryDialog
                 open={openUpdateRoomCategoryDialog}
                 onClose={() => {
@@ -542,8 +549,9 @@ export default function RoomTabs() {
                 }}
                 category={selectedCategory}
             />
-
+            </PermissionGuard>
             {/* Dialog cập nhật phòng */}
+            <PermissionGuard permissions="UPDATE_ROOM">
             <UpdateRoomDialog
                 open={openUpdateRoomDialog}
                 onClose={() => {
@@ -553,7 +561,7 @@ export default function RoomTabs() {
                 onSuccess={() => filteredRooms(page)}
                 room={selectedRoom}
             />
-
+            </PermissionGuard>
             <Grid container spacing={2} sx={{ minWidth: '960px' }}>
                 {/* Bộ lọc */}
                 <Grid item xs={4}>
