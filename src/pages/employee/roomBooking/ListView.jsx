@@ -750,6 +750,7 @@ export default function ListView({ onBookingOpen, onFilterOpen, onViewModeChange
                 open={bookingDialogOpen}
                 onClose={handleBookingDialogClose}
                 roomData={selectedRoom}
+                updateRoomData={refreshRoomData}
             />
         </Box>
     );

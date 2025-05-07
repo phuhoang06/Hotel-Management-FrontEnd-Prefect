@@ -51,6 +51,13 @@
   - [x] Implement conditional UI elements based on room status
   - [x] Support API structure for checkout request
 
+- [x] Implement total price calculation in BookingDialog
+  - [x] Add calculateTotalPrice function to useBookingDialog hook
+  - [x] Calculate price based on room category, booking type, and duration
+  - [x] Properly format and display total price in BookingDialog UI
+  - [x] Support hourly, daily, and overnight rate calculations
+  - [x] Add remaining payment calculation for prepaid bookings
+
 ## Bug Fixes
 - [x] Fix "Khách lưu trú" click event in sidebar menu
   - Fixed GuestListDialog component export
@@ -77,3 +84,54 @@
   - [x] Update room status logic to handle enhanced data
   - [x] Add booking list dialog to display all upcoming bookings for a room
   - [ ] Test integration with all room booking components 
+
+- [x] Fix check-in functionality in BookingDialog
+  - Updated BookingDialog.jsx to use CheckinService.performCheckin instead of RoomBookingService.checkInBooking
+  - Fixed error: "TypeError: RoomBookingService.checkInBooking is not a function"
+  - Added missing required parameter roomIdsToCheckin to match the API specification
+  - Made sure bookingId and roomIdsToCheckin parameters are properly formatted for the API
+  - Maintained consistent error handling and success messaging 
+
+- [x] Implement automatic cancellation for late check-ins
+  - Created LateCheckinHandler component to check for missed check-ins
+  - Added cancelCheckin method to CheckinService for API integration
+  - Integrated with roomBooking.service to fetch all bookings
+  - Set up automatic check for bookings that passed check-in time by over 1 hour
+  - Used check-in cancellation API endpoint (/checkins/cancelled)
+  - Added periodic checks to catch any new late check-ins 
+
+- [x] Improve room checkout process in BookingDialog
+  - Updated payload structure to use correct bookingId format
+  - Simplified checkout process by removing room cleaning option
+  - Set isClean default value to false for all checkouts
+  - Ensured compatibility with the /checkouts API endpoint
+  - Removed unnecessary UI elements related to cleaning status
+  - Added detailed logging for troubleshooting checkout issues
+  - Fixed booking detection logic to properly identify IN_USE bookings
+  - Improved error handling and error message display
+  - Implemented proper response handling according to API documentation
+  - Added validation to ensure required bookingId is available 
+
+- [x] Fix "Cannot read properties of null (reading 'id')" error in BookingDialog
+  - Added proper null checks for roomData in useBookingDialog.js
+  - Updated BookingDialog.jsx to handle null roomData safely
+  - Used optional chaining for all roomData property accesses
+  - Added fallback values to handle null cases 
+
+- [x] Fix in-use room dialog not showing checkout option
+  - Updated handleRoomCardClick in SchematicView.jsx to open BookingDialog instead of RoomDetailsDialog
+  - Ensured rooms with IN_USE status display the correct dialog with checkout functionality
+  - Fixed event handling for active bookings (IN_USE, CHECKOUT_SOON, OVERDUE)
+  - Made console logging more descriptive for debugging purposes 
+
+- [x] Fix CORS error in checkout API request
+  - Removed custom X-Debug-Info header that was causing CORS preflight error
+  - Simplified API request to match pattern used in other services
+  - Fixed "Request header field x-debug-info is not allowed by Access-Control-Allow-Headers" issue
+  - Ensured consistent error handling across service files 
+
+- [x] Fix incorrect bookingId in checkout process
+  - Added logic to handle different booking ID formats in the API
+  - Added diagnostic logging to track booking and room IDs during checkout
+  - Fixed incorrect bookingId reference in useBookingDialog.js
+  - Used bookingToCheckout.bookingId as fallback when available 

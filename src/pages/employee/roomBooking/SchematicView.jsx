@@ -361,9 +361,9 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
             
             // Hiển thị dialog tương ứng dựa trên trạng thái booking
             if (activeBooking) {
-                // Phòng đang sử dụng - Hiển thị dialog chi tiết phòng
-                console.log('Opening RoomDetailsDialog for occupied room with booking:', activeBooking);
-                setRoomDetailsDialogOpen(true);
+                // Phòng đang sử dụng - Hiển thị BookingDialog để xem chi tiết và trả phòng
+                console.log('Opening BookingDialog for occupied room with booking:', activeBooking);
+                setBookingDialogOpen(true);
             } else {
                 // Kiểm tra thời gian hệ thống và thời gian nhận phòng 
                 // nếu có booking.roomStatusInBooking === 'UPCOMING'
@@ -470,6 +470,8 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
     // Đóng dialog danh sách đặt phòng
     const handleBookingListDialogClose = () => {
         setBookingListDialogOpen(false);
+        // Làm mới dữ liệu phòng sau khi đóng dialog danh sách đặt phòng
+        refreshRoomData();
     };
 
     // Đóng dialog đặt phòng
@@ -879,8 +881,10 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                     roomType: selectedRoom?.roomCategory?.name || selectedRoom?.roomCategoryName || 'Phòng tiêu chuẩn',
                     status: selectedRoom?.status,
                     isClean: selectedRoom?.isClean,
+                    id: selectedRoom?.id  // Thêm id để có thể gọi API hủy phòng
                 }}
                 bookings={selectedRoom?.bookings ? selectedRoom.bookings.filter(booking => booking.roomStatusInBooking === 'UPCOMING') : []}
+                updateRoomData={refreshRoomData}
             />
 
             {/* Dialog cảnh báo */}
@@ -910,6 +914,7 @@ export default function SchematicView({ onBookingOpen, onFilterOpen, onViewModeC
                 open={bookingDialogOpen}
                 onClose={handleBookingDialogClose}
                 roomData={selectedRoom}
+                updateRoomData={refreshRoomData}
             />
         </Box>
     );
