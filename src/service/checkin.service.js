@@ -249,6 +249,24 @@ class CheckinService {
   }
 
   /**
+   * Check-in for a booking (changes room status to IN_USE)
+   * 
+   * @param {Object} checkinData - The check-in data
+   * @param {number} checkinData.bookingId - ID of the booking
+   * @param {Array<number>} checkinData.roomIdsToCheckin - Array of room IDs to check in
+   * @returns {Promise} - Promise containing the check-in response
+   */
+  async performCheckin(checkinData) {
+    try {
+      const response = await axiosInstance.post('/checkins', checkinData);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+      throw error;
+    }
+  }
+
+  /**
    * Handle API errors
    * 
    * @param {Error} error - The error object

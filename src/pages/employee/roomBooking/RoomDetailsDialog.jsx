@@ -20,6 +20,52 @@ import EditIcon from '@mui/icons-material/Edit';
 
 // Component for the Room Details Dialog (Occupied Room)
 const RoomDetailsDialog = ({ open, onClose, roomData }) => {
+    if (!roomData) return null;
+    
+    // Xử lý hiển thị thông tin booking từ dữ liệu API mới nếu có
+    const currentBooking = roomData.bookings && roomData.bookings.length > 0 
+        ? roomData.bookings.find(b => 
+            b.roomStatusInBooking === 'IN_USE' || 
+            b.roomStatusInBooking === 'CHECKOUT_SOON' || 
+            b.roomStatusInBooking === 'OVERDUE')
+        : null;
+    
+    // Định dạng thời gian checkin từ mảng
+    const formatDateTime = (dateTimeArray) => {
+        if (!dateTimeArray || !Array.isArray(dateTimeArray)) return '';
+        
+        const date = new Date(
+            dateTimeArray[0],
+            dateTimeArray[1] - 1,
+            dateTimeArray[2],
+            dateTimeArray[3] || 0,
+            dateTimeArray[4] || 0
+        );
+        
+        return date.toLocaleString('vi-VN');
+    };
+    
+    // Tính thời gian đã sử dụng nếu có thông tin checkin
+    const getTimeUsed = (checkinTime) => {
+        if (!checkinTime || !Array.isArray(checkinTime)) return 'Đã sử dụng: 0 giờ 0 phút';
+        
+        const checkin = new Date(
+            checkinTime[0],
+            checkinTime[1] - 1,
+            checkinTime[2],
+            checkinTime[3] || 0,
+            checkinTime[4] || 0
+        );
+        const now = new Date();
+        
+        // Tính khoảng cách thời gian bằng mili giây
+        const diff = now - checkin;
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        
+        return `Đã sử dụng: ${hours} giờ ${minutes} phút`;
+    };
+
     // Default room data if not provided
     const defaultData = {
         roomNumber: 'P.202',

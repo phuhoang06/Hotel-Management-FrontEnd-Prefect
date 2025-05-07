@@ -36,11 +36,20 @@
   - [x] Calculate prices automatically based on room type and duration
   - [x] Handle success and error states for booking process
   - [x] Pass selected room data from Grid/List/Schematic views to QuickBookingDialog
+  - [x] Implement direct check-in using /api/checkins API for immediate room status change
 
 - [x] Implement complete room status display
   - [x] Update status logic according to documentation
   - [x] Implement correct room status transitions
   - [x] Create consistent status visualization across all views with appropriate background colors
+
+- [x] Implement complete room checkout functionality
+  - [x] Create CheckoutService to handle API interactions
+  - [x] Update BookingDialog to support checkout process
+  - [x] Add room cleaning status option during checkout
+  - [x] Handle success and error states for checkout process
+  - [x] Implement conditional UI elements based on room status
+  - [x] Support API structure for checkout request
 
 ## Bug Fixes
 - [x] Fix "Khách lưu trú" click event in sidebar menu
@@ -60,3 +69,11 @@
   - Prevented dialog from closing when interacting with content
   - Improved event handlers for different close scenarios
   - Maintained expected user interaction patterns 
+
+- [ ] Implement enhanced room booking service with detailed booking information
+  - [x] Create new roomBooking.service.js with API connection to /rooms/with-booking-details
+  - [x] Update SchematicView, ListView, and GridView components to use new service
+  - [x] Implement additional data display in room cards
+  - [x] Update room status logic to handle enhanced data
+  - [x] Add booking list dialog to display all upcoming bookings for a room
+  - [ ] Test integration with all room booking components 
