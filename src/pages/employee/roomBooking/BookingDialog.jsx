@@ -12,13 +12,16 @@ import {
   IconButton, 
   Paper,
   Snackbar,
-  Alert
+  Alert,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import { styled } from '@mui/material/styles';
 import RoomBookingService from "../../../service/roomBooking.service.js";
+import CheckoutService from "../../../service/checkout.service.js";
 
 // Styled components
 const PreBooked = styled(Box)(({ theme }) => ({
@@ -83,6 +86,7 @@ const StyledDialogTitle = styled(DialogTitle)(({ theme }) => ({
 
 function BookingDialog({ open, onClose, roomData }) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isClean, setIsClean] = useState(true);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -202,12 +206,74 @@ function BookingDialog({ open, onClose, roomData }) {
     }
   };
 
+  // Xử lý trả phòng
+  const handleCheckout = async () => {
+    try {
+      setIsProcessing(true);
+      
+      // Tìm booking đang sử dụng (IN_USE)
+      const inUseBooking = roomData.bookings?.find(booking => booking.roomStatusInBooking === 'IN_USE');
+      
+      if (!inUseBooking) {
+        setSnackbar({
+          open: true,
+          message: 'Không tìm thấy booking đang sử dụng phòng này!',
+          severity: 'error'
+        });
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Chuẩn bị dữ liệu cho API checkout
+      const checkoutData = {
+        roomId: roomData.id,
+        bookingId: inUseBooking.id,
+        isClean: isClean
+      };
+      
+      // Gọi API để checkout
+      await CheckoutService.checkout(checkoutData);
+      
+      setSnackbar({
+        open: true,
+        message: 'Trả phòng thành công!',
+        severity: 'success'
+      });
+      
+      // Đóng dialog sau khi hiển thị thông báo thành công
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Lỗi khi trả phòng:', error);
+      
+      setSnackbar({
+        open: true,
+        message: 'Có lỗi xảy ra khi trả phòng. Vui lòng thử lại!',
+        severity: 'error'
+      });
+      
+      setIsProcessing(false);
+    }
+  };
+
   // Đóng thông báo
   const handleCloseSnackbar = () => {
     setSnackbar({
       ...snackbar,
       open: false
     });
+  };
+
+  // Kiểm tra nếu phòng đang ở trạng thái đang sử dụng (IN_USE)
+  const isRoomInUse = () => {
+    return roomData.bookings?.some(booking => booking.roomStatusInBooking === 'IN_USE') || false;
+  };
+
+  // Kiểm tra nếu phòng đang ở trạng thái sắp tới (UPCOMING)
+  const isRoomUpcoming = () => {
+    return roomData.bookings?.some(booking => booking.roomStatusInBooking === 'UPCOMING') || false;
   };
 
   return (
@@ -234,7 +300,31 @@ function BookingDialog({ open, onClose, roomData }) {
             <Typography variant="h6" component="div">
               {roomData.roomCategory?.name || roomData.roomCategoryName || 'Phòng tiêu chuẩn'}
             </Typography>
-            <PreBooked>Đã đến giờ nhận phòng</PreBooked>
+            {isRoomInUse() ? (
+              <Box sx={{ 
+                backgroundColor: '#e6f7ff', 
+                color: '#0080ff', 
+                padding: '4px 10px',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: 400
+              }}>
+                Đang sử dụng
+              </Box>
+            ) : isRoomUpcoming() ? (
+              <PreBooked>Đã đến giờ nhận phòng</PreBooked>
+            ) : (
+              <Box sx={{
+                backgroundColor: '#e6ffe6',
+                color: '#00cc00',
+                padding: '4px 10px',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: 400
+              }}>
+                Phòng trống
+              </Box>
+            )}
           </Box>
           
           <Divider sx={{ my: 2 }} />
@@ -291,6 +381,21 @@ function BookingDialog({ open, onClose, roomData }) {
               <Typography>{upcomingBooking.prepaidAmount?.toLocaleString('vi-VN') || '0'} đ</Typography>
             </TotalRow>
           </PriceSummary>
+          
+          {isRoomInUse() && (
+            <Box sx={{ mt: 3 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox 
+                    checked={isClean}
+                    onChange={(e) => setIsClean(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label="Phòng đã được dọn dẹp"
+              />
+            </Box>
+          )}
         </DialogContent>
         
         <DialogActions sx={{ padding: '16px 24px' }}>
@@ -308,19 +413,38 @@ function BookingDialog({ open, onClose, roomData }) {
           >
             Hủy
           </Button>
-          <Button 
-            variant="contained"
-            onClick={handleCheckin}
-            disabled={isProcessing}
-            sx={{ 
-              backgroundColor: '#00a06d',
-              '&:hover': {
-                backgroundColor: '#008f5e'
-              }
-            }}
-          >
-            Nhận phòng ngay
-          </Button>
+          
+          {isRoomUpcoming() && (
+            <Button 
+              variant="contained"
+              onClick={handleCheckin}
+              disabled={isProcessing}
+              sx={{ 
+                backgroundColor: '#00a06d',
+                '&:hover': {
+                  backgroundColor: '#008f5e'
+                }
+              }}
+            >
+              Nhận phòng ngay
+            </Button>
+          )}
+          
+          {isRoomInUse() && (
+            <Button 
+              variant="contained"
+              onClick={handleCheckout}
+              disabled={isProcessing}
+              sx={{ 
+                backgroundColor: '#ff6666',
+                '&:hover': {
+                  backgroundColor: '#ff4d4d'
+                }
+              }}
+            >
+              Trả phòng
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 

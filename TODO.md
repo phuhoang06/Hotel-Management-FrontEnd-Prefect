@@ -43,6 +43,14 @@
   - [x] Implement correct room status transitions
   - [x] Create consistent status visualization across all views with appropriate background colors
 
+- [x] Implement complete room checkout functionality
+  - [x] Create CheckoutService to handle API interactions
+  - [x] Update BookingDialog to support checkout process
+  - [x] Add room cleaning status option during checkout
+  - [x] Handle success and error states for checkout process
+  - [x] Implement conditional UI elements based on room status
+  - [x] Support API structure for checkout request
+
 ## Bug Fixes
 - [x] Fix "Khách lưu trú" click event in sidebar menu
   - Fixed GuestListDialog component export
