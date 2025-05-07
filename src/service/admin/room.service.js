@@ -86,6 +86,22 @@ class RoomViewService {
         });
     }
 
+    static async updateRoomCategory(id, roomCategoryData, imageFile) {
+        const formData = new FormData();
+        // Gửi roomCategory data dưới dạng chuỗi JSON
+        formData.append('roomCategory', JSON.stringify(roomCategoryData));
+        // Gửi file ảnh (nếu có)
+        if (imageFile instanceof File) {
+            formData.append('img', imageFile);
+        }
+
+        return await axiosInstance.put(`/room-categories/${id}/edit`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+    }
+
     /**
      * Xóa phòng
      */

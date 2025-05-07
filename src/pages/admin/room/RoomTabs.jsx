@@ -31,8 +31,10 @@ import AddIcon from '@mui/icons-material/Add';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import AddRoomCategoryDialog from './AddRoomCategoryDialog.jsx';
 import AddRoomDialog from './AddRoomDialog.jsx';
+import UpdateRoomCategoryDialog from './UpdateRoomCategoryDialog.jsx';
+import UpdateRoomDialog from './UpdateRoomDialog.jsx';
 import { debounce } from 'lodash';
-import UpdateRoomDialog from "./UpdateRoomDialog.jsx";
+import PermissionGuard from "../../../components/PermissionGuard.jsx";
 
 const placeholderImage = 'https://via.placeholder.com/200x150?text=No+Image';
 
@@ -107,6 +109,12 @@ export default function RoomTabs() {
     const [openRoomDialog, setOpenRoomDialog] = useState(false);
     // Trạng thái tải danh sách hạng phòng
     const [loadingCategories, setLoadingCategories] = useState(false);
+    // Dialog cập nhật hạng phòng
+    const [openUpdateRoomCategoryDialog, setOpenUpdateRoomCategoryDialog] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState(null);
+    // Dialog cập nhật phòng
+    const [openUpdateRoomDialog, setOpenUpdateRoomDialog] = useState(false);
+    const [selectedRoom, setSelectedRoom] = useState(null);
 
     // Xử lý mở/đóng menu thêm mới
     const handleAddMouseEnter = () => setOpenAddMenu(true);
@@ -129,12 +137,6 @@ export default function RoomTabs() {
 
     // Đóng dialog thêm phòng
     const handleCloseRoomDialog = () => setOpenRoomDialog(false);
-
-    // Trạng thái dialog cập nhật phòng
-    const [openUpdateRoomDialog, setOpenUpdateRoomDialog] = useState(false);
-    const [selectedRoom, setSelectedRoom] = useState(null);
-
-
 
     // Tải danh sách hạng phòng ban đầu
     const fetchRoomCategories = useCallback(async () => {
@@ -259,7 +261,7 @@ export default function RoomTabs() {
         setExpandedRoomDetails(null);
         setSelectedCategories([]);
         setMainImage(null);
-        setCategoryRoom(''); // Reset bộ lọc loại phòng khi chuyển tab
+        setCategoryRoom('');
         setSearchRoom('');
         setStatusRoom('');
         setFloorRoom('');
@@ -326,26 +328,27 @@ export default function RoomTabs() {
     // Xử lý cập nhật hạng phòng
     const handleUpdate = (category, e) => {
         e?.stopPropagation();
-        alert(`Chuyển đến form chỉnh sửa hạng phòng: ${category.id}`);
+        setSelectedCategory(category);
+        setOpenUpdateRoomCategoryDialog(true);
     };
 
     // Xử lý ngừng kinh doanh hạng phòng
-    const handleDeactivate = async (category, e) => {
-        e?.stopPropagation();
-        try {
-            setLoading(true);
-            await RoomViewService.updateRoomCategoryStatus(category.id, 'INACTIVE');
-            await filteredCategories(page);
-            setExpandedRow(null);
-            setExpandedRowDetails(null);
-            toast.success('Ngừng kinh doanh hạng phòng thành công');
-        } catch (err) {
-            console.error('Lỗi khi ngừng kinh doanh hạng phòng:', err);
-            toast.error(`Không thể ngừng kinh doanh hạng phòng: ${err.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
+    // const handleDeactivate = async (category, e) => {
+    //     e?.stopPropagation();
+    //     try {
+    //         setLoading(true);
+    //         await RoomViewService.updateRoomCategoryStatus(category.id, 'INACTIVE');
+    //         await filteredCategories(page);
+    //         setExpandedRow(null);
+    //         setExpandedRowDetails(null);
+    //         toast.success('Ngừng kinh doanh hạng phòng thành công');
+    //     } catch (err) {
+    //         console.error('Lỗi khi ngừng kinh doanh hạng phòng:', err);
+    //         toast.error(`Không thể ngừng kinh doanh hạng phòng: ${err.message}`);
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
 
     // Xử lý xóa hạng phòng
     const handleDelete = async (category, e) => {
@@ -462,7 +465,7 @@ export default function RoomTabs() {
         { id: 'floor', label: 'Tầng', width: '64px' },
         { id: 'status', label: 'Tình trạng', width: '120px' },
         { id: 'clean', label: 'Trạng thái dọn dẹp', width: '144px' },
-        { id: 'actions', label: 'Hành động', width: '160px' }, // Thêm cột hành động
+        { id: 'actions', label: 'Hành động', width: '160px' },
     ];
 
     return (
@@ -511,22 +514,44 @@ export default function RoomTabs() {
             </Paper>
 
             {/* Dialog thêm hạng phòng */}
+            <PermissionGuard permissions="CREATE_ROOM_CATEGORY">
+
             <AddRoomCategoryDialog
                 open={openRoomCategoryDialog}
                 onClose={handleCloseRoomCategoryDialog}
                 onSuccess={() => {
-                    fetchRoomCategories(); // Cập nhật lại danh sách hạng phòng sau khi thêm mới
+                    fetchRoomCategories();
                     filteredCategories(page);
                 }}
             />
-
+            </PermissionGuard>
             {/* Dialog thêm phòng */}
+            <PermissionGuard permissions="CREATE_ROOM">
+
             <AddRoomDialog
                 open={openRoomDialog}
                 onClose={handleCloseRoomDialog}
                 onSuccess={() => filteredRooms(page)}
             />
+            </PermissionGuard>
+            {/* Dialog cập nhật hạng phòng */}
+            <PermissionGuard permissions="UPDATE_ROOM_CATEGORY">
 
+            <UpdateRoomCategoryDialog
+                open={openUpdateRoomCategoryDialog}
+                onClose={() => {
+                    setOpenUpdateRoomCategoryDialog(false);
+                    setSelectedCategory(null);
+                }}
+                onSuccess={() => {
+                    fetchRoomCategories();
+                    filteredCategories(page);
+                }}
+                category={selectedCategory}
+            />
+            </PermissionGuard>
+            {/* Dialog cập nhật phòng */}
+            <PermissionGuard permissions="UPDATE_ROOM">
             <UpdateRoomDialog
                 open={openUpdateRoomDialog}
                 onClose={() => {
@@ -536,7 +561,7 @@ export default function RoomTabs() {
                 onSuccess={() => filteredRooms(page)}
                 room={selectedRoom}
             />
-
+            </PermissionGuard>
             <Grid container spacing={2} sx={{ minWidth: '960px' }}>
                 {/* Bộ lọc */}
                 <Grid item xs={4}>
@@ -605,7 +630,7 @@ export default function RoomTabs() {
                                         onChange={(e) => {
                                             setCategoryRoom(e.target.value);
                                             setPage(0);
-                                            filteredRooms(0); // Gọi trực tiếp để áp dụng bộ lọc ngay lập tức
+                                            filteredRooms(0);
                                         }}
                                         label="Loại phòng"
                                         sx={{ fontSize: '0.875rem' }}
@@ -634,7 +659,7 @@ export default function RoomTabs() {
                                         onChange={(e) => {
                                             setFloorRoom(e.target.value);
                                             setPage(0);
-                                            filteredRooms(0); // Gọi trực tiếp để áp dụng bộ lọc ngay lập tức
+                                            filteredRooms(0);
                                         }}
                                         label="Tầng"
                                         sx={{ fontSize: '0.875rem' }}
@@ -656,7 +681,7 @@ export default function RoomTabs() {
                                         onChange={(e) => {
                                             setStatusRoom(e.target.value);
                                             setPage(0);
-                                            filteredRooms(0); // Gọi trực tiếp để áp dụng bộ lọc ngay lập tức
+                                            filteredRooms(0);
                                         }}
                                         label="Tình trạng"
                                         sx={{ fontSize: '0.875rem' }}
@@ -835,7 +860,7 @@ export default function RoomTabs() {
                                                                                         lớn, {expandedRowDetails.maxChildCapacity} trẻ em
                                                                                     </Typography>
                                                                                     <Typography variant="body2" sx={{ mb: 0.4, fontSize: '0.875rem' }}>
-                                                                                        <strong>Sức chứa từ chuẩn:</strong> {expandedRowDetails.standardAdultCapacity}{' '}
+                                                                                        <strong>Sức chứa tiêu chuẩn:</strong> {expandedRowDetails.standardAdultCapacity}{' '}
                                                                                         người lớn, {expandedRowDetails.standardChildCapacity} trẻ em
                                                                                     </Typography>
                                                                                 </Grid>
@@ -878,15 +903,15 @@ export default function RoomTabs() {
                                                                         >
                                                                             Cập nhật
                                                                         </Button>
-                                                                        <Button
-                                                                            variant="contained"
-                                                                            color="error"
-                                                                            onClick={(e) => handleDeactivate(category, e)}
-                                                                            size="small"
-                                                                            sx={{ minWidth: 64, fontSize: '0.875rem' }}
-                                                                        >
-                                                                            Ngừng kinh doanh
-                                                                        </Button>
+                                                                        {/*<Button*/}
+                                                                        {/*    variant="contained"*/}
+                                                                        {/*    color="error"*/}
+                                                                        {/*    onClick={(e) => handleDeactivate(category, e)}*/}
+                                                                        {/*    size="small"*/}
+                                                                        {/*    sx={{ minWidth: 64, fontSize: '0.875rem' }}*/}
+                                                                        {/*>*/}
+                                                                        {/*    Ngừng kinh doanh*/}
+                                                                        {/*</Button>*/}
                                                                         <Button
                                                                             variant="contained"
                                                                             color="error"
