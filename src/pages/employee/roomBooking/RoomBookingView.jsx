@@ -5,6 +5,7 @@ import GridView from './GridView';
 import ListView from './ListView';
 import BookingDialog from './BookingDialog';
 import FilterDialog from './FilterDialog';
+import LateCheckinHandler from './LateCheckinHandler';
 import useRoomBooking from "../../../layouts/employee/hooks/useRoomBooking.js";
 
 export default function RoomBookingView() {
@@ -21,6 +22,8 @@ export default function RoomBookingView() {
 
     return (
         <Box sx={{ flexGrow: 1, mt: 0 }}>
+            <LateCheckinHandler />
+            
             {viewMode === 'Sơ đồ' && (
                 <SchematicView
                     onBookingOpen={handleBookingOpen}

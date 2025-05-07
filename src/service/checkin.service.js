@@ -267,6 +267,24 @@ class CheckinService {
   }
 
   /**
+   * Cancel check-in for bookings that have passed their check-in time
+   * 
+   * @param {Object} cancellationData - The cancellation data
+   * @param {number} cancellationData.bookingId - ID of the booking
+   * @param {Array<number>} cancellationData.roomIdsToCheckin - Array of room IDs to check in
+   * @returns {Promise} - Promise containing the cancellation response
+   */
+  async cancelCheckin(cancellationData) {
+    try {
+      const response = await axiosInstance.post('/checkins/cancelled', cancellationData);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+      throw error;
+    }
+  }
+
+  /**
    * Handle API errors
    * 
    * @param {Error} error - The error object

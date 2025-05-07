@@ -845,6 +845,7 @@ export default function GridView({ onBookingOpen, onFilterOpen, onViewModeChange
                 open={bookingDialogOpen}
                 onClose={handleBookingDialogClose}
                 roomData={selectedRoom}
+                updateRoomData={refreshRoomData}
             />
         </Box>
     );
